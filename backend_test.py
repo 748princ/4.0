@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 
 class JobberProAPITester:
-    def __init__(self, base_url: str = "https://301cc15e-4441-4c11-aa55-bbe12559ed17.preview.emergentagent.com"):
+    def __init__(self, base_url: str = "http://localhost:8001"):
         self.base_url = base_url.rstrip('/')
         self.api_url = f"{self.base_url}/api"
         self.token = None
