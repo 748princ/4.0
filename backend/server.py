@@ -507,6 +507,23 @@ async def upload_job_photo(
     
     return {"message": "Photo uploaded successfully", "filename": filename}
 
+# Delete routes
+@api_router.delete("/clients/{client_id}")
+async def delete_client(client_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a client."""
+    result = await db.clients.delete_one({"id": client_id, "company_id": current_user["company_id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return {"message": "Client deleted successfully"}
+
+@api_router.delete("/jobs/{job_id}")
+async def delete_job(job_id: str, current_user: dict = Depends(get_current_user)):
+    """Delete a job."""
+    result = await db.jobs.delete_one({"id": job_id, "company_id": current_user["company_id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {"message": "Job deleted successfully"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
