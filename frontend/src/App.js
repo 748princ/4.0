@@ -733,6 +733,8 @@ const MainApp = () => {
         );
       case 'jobs':
         return <JobsManagement />;
+      case 'clients':
+        return <ClientsManagement />;
       default:
         return (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
