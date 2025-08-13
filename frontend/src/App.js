@@ -408,12 +408,15 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     </div>
   );
 };
+// Jobs Management Component
 const JobsManagement = () => {
   const [jobs, setJobs] = useState([]);
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showJobModal, setShowJobModal] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchJobs();
@@ -440,13 +443,59 @@ const JobsManagement = () => {
     }
   };
 
+  const filteredJobs = jobs.filter(job => {
+    const client = clients.find(c => c.id === job.client_id);
+    const matchesFilter = filter === 'all' || job.status === filter;
+    const matchesSearch = searchTerm === '' || 
+      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.service_type.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesFilter && matchesSearch;
+  });
+
   const handleStatusUpdate = async (jobId, newStatus) => {
     try {
       await api.put(`/jobs/${jobId}/status?status=${newStatus}`);
       fetchJobs(); // Refresh jobs list
+      alert(`Job status updated to ${newStatus.replace('_', ' ')}!`);
     } catch (error) {
       console.error('Error updating job status:', error);
       alert('Failed to update job status');
+    }
+  };
+
+  const handleAddJob = () => {
+    setEditingJob(null);
+    setShowJobModal(true);
+  };
+
+  const handleEditJob = (job) => {
+    setEditingJob(job);
+    setShowJobModal(true);
+  };
+
+  const handleSaveJob = (jobData) => {
+    if (editingJob) {
+      setJobs(jobs.map(job => job.id === editingJob.id ? jobData : job));
+    } else {
+      setJobs([...jobs, jobData]);
+    }
+    setShowJobModal(false);
+    fetchJobs(); // Refresh to get updated data
+  };
+
+  const handleDeleteJob = async (jobId) => {
+    if (!window.confirm('Are you sure you want to delete this job?')) {
+      return;
+    }
+
+    try {
+      await api.delete(`/jobs/${jobId}`);
+      setJobs(jobs.filter(job => job.id !== jobId));
+      alert('Job deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting job:', error);
+      alert('Failed to delete job');
     }
   };
 
@@ -460,6 +509,16 @@ const JobsManagement = () => {
     }
   };
 
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'urgent': return 'text-red-600';
+      case 'high': return 'text-orange-600';
+      case 'medium': return 'text-yellow-600';
+      case 'low': return 'text-green-600';
+      default: return 'text-gray-600';
+    }
+  };
+
   if (loading) {
     return <div className="animate-pulse p-8">Loading jobs...</div>;
   }
@@ -468,28 +527,53 @@ const JobsManagement = () => {
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Jobs ({jobs.length})</h2>
-          <button 
-            onClick={() => setShowJobModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            + New Job
-          </button>
+          <h2 className="text-xl font-semibold text-gray-900">Jobs ({filteredJobs.length})</h2>
+          <div className="flex items-center space-x-4">
+            <input
+              type="text"
+              placeholder="Search jobs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <select 
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Jobs</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+            <button 
+              onClick={handleAddJob}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              + New Job
+            </button>
+          </div>
         </div>
 
         <div className="space-y-4">
-          {jobs.length === 0 ? (
+          {filteredJobs.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              <p>No jobs found.</p>
+              <p>
+                {searchTerm || filter !== 'all' 
+                  ? 'No jobs found matching your criteria.' 
+                  : 'No jobs found.'
+                }
+              </p>
               <button 
-                onClick={() => setShowJobModal(true)}
+                onClick={handleAddJob}
                 className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Create Your First Job
               </button>
             </div>
           ) : (
-            jobs.map(job => {
+            filteredJobs.map(job => {
               const client = clients.find(c => c.id === job.client_id);
               return (
                 <div key={job.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
@@ -500,6 +584,9 @@ const JobsManagement = () => {
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(job.status)}`}>
                           {job.status.replace('_', ' ')}
                         </span>
+                        <span className={`text-sm font-medium ${getPriorityColor(job.priority)}`}>
+                          {job.priority} priority
+                        </span>
                       </div>
                       
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
@@ -509,21 +596,36 @@ const JobsManagement = () => {
                         </div>
                         <div>
                           <p><strong>Scheduled:</strong> {new Date(job.scheduled_date).toLocaleString()}</p>
-                          <p><strong>Priority:</strong> {job.priority}</p>
+                          <p><strong>Duration:</strong> {job.estimated_duration} min</p>
                         </div>
                         <div>
                           <p><strong>Estimated Cost:</strong> ${job.estimated_cost}</p>
-                          <p><strong>Duration:</strong> {job.estimated_duration} min</p>
+                          {job.actual_cost && <p><strong>Actual Cost:</strong> ${job.actual_cost}</p>}
                         </div>
                       </div>
                     </div>
                     
                     <div className="text-right ml-4">
                       <div className="space-y-2">
+                        <div className="flex space-x-2">
+                          <button 
+                            onClick={() => handleEditJob(job)}
+                            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteJob(job.id)}
+                            className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                        
                         {job.status === 'scheduled' && (
                           <button 
                             onClick={() => handleStatusUpdate(job.id, 'in_progress')}
-                            className="block bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
+                            className="w-full bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
                           >
                             Start Job
                           </button>
@@ -532,7 +634,7 @@ const JobsManagement = () => {
                         {job.status === 'in_progress' && (
                           <button 
                             onClick={() => handleStatusUpdate(job.id, 'completed')}
-                            className="block bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition-colors"
+                            className="w-full bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700 transition-colors"
                           >
                             Complete Job
                           </button>
@@ -546,6 +648,14 @@ const JobsManagement = () => {
           )}
         </div>
       </div>
+
+      <Modal isOpen={showJobModal} onClose={() => setShowJobModal(false)} title={editingJob ? 'Edit Job' : 'Create New Job'}>
+        <JobForm
+          job={editingJob}
+          onSave={handleSaveJob}
+          onClose={() => setShowJobModal(false)}
+        />
+      </Modal>
     </div>
   );
 };
