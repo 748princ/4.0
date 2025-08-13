@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import './App.css';
 import axios from 'axios';
+import ClientsManagement from './components/ClientsManagement';
+import JobForm from './components/JobForm';
 
 // Create contexts
 const AuthContext = createContext();
