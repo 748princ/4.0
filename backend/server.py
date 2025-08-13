@@ -13,8 +13,9 @@ import jwt
 import bcrypt
 import uuid
 import smtplib
-from email.mime.text import MimeText
-from email.mime.multipart import MimeMultipart
+# Email imports commented out as they're not used in current implementation
+# from email.mime.text import MimeText
+# from email.mime.multipart import MimeMultipart
 import stripe
 from dotenv import load_dotenv
 import json
