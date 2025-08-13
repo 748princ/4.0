@@ -248,11 +248,7 @@
   run_ui: false
 
 ## test_plan:
-  current_focus:
-    - "Authentication UI"
-    - "Dashboard Interface" 
-    - "Jobs Management Interface"
-    - "Clients Management Interface"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
