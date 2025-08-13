@@ -237,12 +237,12 @@
 
 ## test_plan:
   current_focus:
-    - "User Authentication System"
-    - "Client Management System" 
-    - "Job Management System"
-    - "Dashboard Analytics"
+    - "Authentication UI"
+    - "Dashboard Interface" 
+    - "Jobs Management Interface"
+    - "Clients Management Interface"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
 ## agent_communication:
