@@ -10,7 +10,7 @@ const ApiContext = createContext();
 
 // API service
 const api = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001/api',
+  baseURL: `${process.env.REACT_APP_BACKEND_URL}/api` || 'http://localhost:8001/api',
 });
 
 // Add token to requests
