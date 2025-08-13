@@ -401,7 +401,7 @@ async def create_invoice(invoice_data: InvoiceCreate, current_user: dict = Depen
     if len(jobs) != len(invoice_data.job_ids):
         raise HTTPException(status_code=400, detail="One or more jobs not found")
     
-    subtotal = sum(job.get("actual_cost", job.get("estimated_cost", 0)) for job in jobs)
+    subtotal = sum(job.get("actual_cost") or job.get("estimated_cost") or 0 for job in jobs)
     tax_amount = subtotal * invoice_data.tax_rate
     total_amount = subtotal + tax_amount - invoice_data.discount_amount
     
