@@ -740,12 +740,7 @@ const MainApp = () => {
       case 'invoices':
         return <InvoicesManagement />;
       case 'reports':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Reports & Analytics</h2>
-            <p className="text-gray-600">Coming Soon - Advanced reporting features under development.</p>
-          </div>
-        );
+        return <ReportsAnalytics />;
       default:
         return (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
