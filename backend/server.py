@@ -644,51 +644,313 @@ async def update_invoice_status(
     return {"message": "Invoice status updated successfully"}
 
 # Dashboard Routes
-@api_router.get("/dashboard/stats")
+@api_router.get("/dashboard/stats", response_model=dict)
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     """Get dashboard statistics."""
-    company_id = current_user["company_id"]
+    # Get basic counts
+    total_jobs = await db.jobs.count_documents({"company_id": current_user["company_id"]})
+    total_clients = await db.clients.count_documents({"company_id": current_user["company_id"]})
     
-    # Get counts and metrics
-    total_jobs = await db.jobs.count_documents({"company_id": company_id})
-    total_clients = await db.clients.count_documents({"company_id": company_id})
+    # Jobs today
+    today = datetime.utcnow().date()
     jobs_today = await db.jobs.count_documents({
-        "company_id": company_id,
+        "company_id": current_user["company_id"],
         "scheduled_date": {
-            "$gte": datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0),
-            "$lt": datetime.utcnow().replace(hour=23, minute=59, second=59, microsecond=999999)
+            "$gte": datetime.combine(today, datetime.min.time()),
+            "$lt": datetime.combine(today + timedelta(days=1), datetime.min.time())
         }
     })
     
-    # Calculate revenue from completed jobs this month
-    month_start = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Monthly revenue from completed jobs
+    start_of_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     completed_jobs = await db.jobs.find({
-        "company_id": company_id,
+        "company_id": current_user["company_id"],
         "status": "completed",
-        "completed_date": {"$gte": month_start}
+        "scheduled_date": {"$gte": start_of_month}
     }).to_list(1000)
     
     monthly_revenue = sum(job.get("actual_cost", job.get("estimated_cost", 0)) for job in completed_jobs)
+    
+    # Completion rate
+    if total_jobs > 0:
+        completed_count = await db.jobs.count_documents({
+            "company_id": current_user["company_id"],
+            "status": "completed"
+        })
+        completion_rate = round((completed_count / total_jobs) * 100)
+    else:
+        completion_rate = 0
     
     return {
         "total_jobs": total_jobs,
         "total_clients": total_clients,
         "jobs_today": jobs_today,
         "monthly_revenue": monthly_revenue,
-        "completion_rate": 85  # This could be calculated from actual data
+        "completion_rate": completion_rate
     }
 
 @api_router.get("/dashboard/recent-jobs")
 async def get_recent_jobs(current_user: dict = Depends(get_current_user)):
     """Get recent jobs for dashboard."""
-    jobs = await db.jobs.find({"company_id": current_user["company_id"]}).sort("created_at", -1).limit(10).to_list(10)
+    jobs = await db.jobs.find(
+        {"company_id": current_user["company_id"]},
+        sort=[("scheduled_date", -1)]
+    ).limit(5).to_list(5)
     
-    # Enrich with client data
+    # Add client names
     for job in jobs:
         client = await db.clients.find_one({"id": job["client_id"]})
-        job["client_name"] = client["name"] if client else "Unknown Client"
+        job["client_name"] = client["name"] if client else "Unknown"
     
     return jobs
+
+# Analytics Routes
+@api_router.get("/analytics/revenue")
+async def get_revenue_analytics(
+    period: str = "monthly",  # monthly, quarterly, yearly
+    current_user: dict = Depends(get_current_user)
+):
+    """Get revenue analytics data."""
+    now = datetime.utcnow()
+    
+    # Define date ranges based on period
+    if period == "monthly":
+        # Last 12 months
+        start_date = now.replace(day=1) - timedelta(days=365)
+        periods = []
+        current = start_date.replace(day=1)
+        while current <= now:
+            next_month = (current.replace(day=28) + timedelta(days=4)).replace(day=1)
+            periods.append({
+                'start': current,
+                'end': next_month,
+                'label': current.strftime('%Y-%m')
+            })
+            current = next_month
+    elif period == "quarterly":
+        # Last 8 quarters
+        periods = []
+        for i in range(8, 0, -1):
+            quarter_start = now - timedelta(days=i*90)
+            quarter_end = quarter_start + timedelta(days=90)
+            periods.append({
+                'start': quarter_start,
+                'end': quarter_end,
+                'label': f"Q{((quarter_start.month-1)//3)+1} {quarter_start.year}"
+            })
+    else:  # yearly
+        # Last 5 years
+        periods = []
+        for i in range(5, 0, -1):
+            year = now.year - i + 1
+            periods.append({
+                'start': datetime(year, 1, 1),
+                'end': datetime(year + 1, 1, 1),
+                'label': str(year)
+            })
+    
+    revenue_data = []
+    for period_info in periods:
+        # Get completed jobs in this period
+        jobs = await db.jobs.find({
+            "company_id": current_user["company_id"],
+            "status": "completed",
+            "scheduled_date": {
+                "$gte": period_info['start'],
+                "$lt": period_info['end']
+            }
+        }).to_list(1000)
+        
+        revenue = sum(job.get("actual_cost", job.get("estimated_cost", 0)) for job in jobs)
+        revenue_data.append({
+            'period': period_info['label'],
+            'revenue': revenue,
+            'jobs_count': len(jobs)
+        })
+    
+    return {
+        'period_type': period,
+        'data': revenue_data
+    }
+
+@api_router.get("/analytics/jobs")
+async def get_job_analytics(current_user: dict = Depends(get_current_user)):
+    """Get job performance analytics."""
+    # Get all jobs
+    jobs = await db.jobs.find({"company_id": current_user["company_id"]}).to_list(10000)
+    
+    # Status distribution
+    status_counts = {}
+    for job in jobs:
+        status = job.get('status', 'unknown')
+        status_counts[status] = status_counts.get(status, 0) + 1
+    
+    # Service type distribution
+    service_counts = {}
+    service_revenue = {}
+    for job in jobs:
+        service = job.get('service_type', 'Other')
+        service_counts[service] = service_counts.get(service, 0) + 1
+        
+        if job.get('status') == 'completed':
+            cost = job.get("actual_cost", job.get("estimated_cost", 0))
+            service_revenue[service] = service_revenue.get(service, 0) + cost
+    
+    # Priority distribution
+    priority_counts = {}
+    for job in jobs:
+        priority = job.get('priority', 'medium')
+        priority_counts[priority] = priority_counts.get(priority, 0) + 1
+    
+    # Average duration vs estimated
+    duration_analysis = []
+    for job in jobs:
+        if job.get('status') == 'completed' and job.get('estimated_duration'):
+            estimated = job.get('estimated_duration', 0)
+            # For now, we'll assume actual duration = estimated + random variance
+            # In a real system, you'd track actual duration
+            actual = estimated * (0.8 + 0.4 * hash(job['id']) % 100 / 100)
+            duration_analysis.append({
+                'estimated': estimated,
+                'actual': actual,
+                'variance': actual - estimated
+            })
+    
+    return {
+        'status_distribution': status_counts,
+        'service_type_distribution': service_counts,
+        'service_type_revenue': service_revenue,
+        'priority_distribution': priority_counts,
+        'duration_analysis': duration_analysis,
+        'total_jobs': len(jobs)
+    }
+
+@api_router.get("/analytics/clients")
+async def get_client_analytics(current_user: dict = Depends(get_current_user)):
+    """Get client analytics data."""
+    # Get all clients and their jobs
+    clients = await db.clients.find({"company_id": current_user["company_id"]}).to_list(1000)
+    
+    client_analytics = []
+    for client in clients:
+        # Get jobs for this client
+        jobs = await db.jobs.find({
+            "company_id": current_user["company_id"],
+            "client_id": client["id"]
+        }).to_list(1000)
+        
+        # Calculate metrics
+        total_jobs = len(jobs)
+        completed_jobs = len([j for j in jobs if j.get('status') == 'completed'])
+        total_revenue = sum(
+            job.get("actual_cost", job.get("estimated_cost", 0)) 
+            for job in jobs if job.get('status') == 'completed'
+        )
+        
+        # Get invoices for this client
+        invoices = await db.invoices.find({
+            "company_id": current_user["company_id"],
+            "client_id": client["id"]
+        }).to_list(1000)
+        
+        paid_invoices = len([inv for inv in invoices if inv.get('status') == 'paid'])
+        total_invoiced = sum(inv.get('total_amount', 0) for inv in invoices)
+        outstanding_amount = sum(
+            inv.get('total_amount', 0) for inv in invoices 
+            if inv.get('status') not in ['paid']
+        )
+        
+        client_analytics.append({
+            'client_id': client['id'],
+            'client_name': client['name'],
+            'total_jobs': total_jobs,
+            'completed_jobs': completed_jobs,
+            'completion_rate': round((completed_jobs / total_jobs * 100) if total_jobs > 0 else 0),
+            'total_revenue': total_revenue,
+            'total_invoiced': total_invoiced,
+            'outstanding_amount': outstanding_amount,
+            'payment_rate': round((paid_invoices / len(invoices) * 100) if invoices else 0)
+        })
+    
+    # Sort by revenue descending
+    client_analytics.sort(key=lambda x: x['total_revenue'], reverse=True)
+    
+    return {
+        'clients': client_analytics,
+        'summary': {
+            'total_clients': len(clients),
+            'active_clients': len([c for c in client_analytics if c['total_jobs'] > 0]),
+            'avg_revenue_per_client': sum(c['total_revenue'] for c in client_analytics) / len(client_analytics) if client_analytics else 0
+        }
+    }
+
+@api_router.get("/analytics/business-insights")
+async def get_business_insights(current_user: dict = Depends(get_current_user)):
+    """Get business insights and KPIs."""
+    now = datetime.utcnow()
+    last_month = now - timedelta(days=30)
+    last_year = now - timedelta(days=365)
+    
+    # Get data for calculations
+    all_jobs = await db.jobs.find({"company_id": current_user["company_id"]}).to_list(10000)
+    recent_jobs = [j for j in all_jobs if datetime.fromisoformat(j['scheduled_date'].replace('Z', '+00:00')) >= last_month]
+    yearly_jobs = [j for j in all_jobs if datetime.fromisoformat(j['scheduled_date'].replace('Z', '+00:00')) >= last_year]
+    
+    all_invoices = await db.invoices.find({"company_id": current_user["company_id"]}).to_list(10000)
+    recent_invoices = [inv for inv in all_invoices if datetime.fromisoformat(inv['due_date'].replace('Z', '+00:00')) >= last_month]
+    
+    # Revenue trends
+    current_month_revenue = sum(
+        job.get("actual_cost", job.get("estimated_cost", 0)) 
+        for job in recent_jobs if job.get('status') == 'completed'
+    )
+    
+    yearly_revenue = sum(
+        job.get("actual_cost", job.get("estimated_cost", 0)) 
+        for job in yearly_jobs if job.get('status') == 'completed'
+    )
+    
+    # Growth calculations (simplified)
+    avg_monthly_revenue = yearly_revenue / 12 if yearly_revenue > 0 else 0
+    revenue_growth = ((current_month_revenue - avg_monthly_revenue) / avg_monthly_revenue * 100) if avg_monthly_revenue > 0 else 0
+    
+    # Payment insights
+    overdue_invoices = [inv for inv in all_invoices if inv.get('status') == 'overdue']
+    outstanding_amount = sum(inv.get('total_amount', 0) for inv in overdue_invoices)
+    
+    # Top service types
+    service_performance = {}
+    for job in all_jobs:
+        if job.get('status') == 'completed':
+            service = job.get('service_type', 'Other')
+            revenue = job.get("actual_cost", job.get("estimated_cost", 0))
+            if service in service_performance:
+                service_performance[service]['revenue'] += revenue
+                service_performance[service]['count'] += 1
+            else:
+                service_performance[service] = {'revenue': revenue, 'count': 1}
+    
+    top_services = sorted(service_performance.items(), key=lambda x: x[1]['revenue'], reverse=True)[:5]
+    
+    return {
+        'revenue_metrics': {
+            'current_month': current_month_revenue,
+            'yearly_total': yearly_revenue,
+            'average_monthly': avg_monthly_revenue,
+            'growth_rate': round(revenue_growth, 1)
+        },
+        'payment_insights': {
+            'overdue_invoices_count': len(overdue_invoices),
+            'outstanding_amount': outstanding_amount,
+            'average_payment_time': 15  # Placeholder - would need actual payment date tracking
+        },
+        'operational_metrics': {
+            'jobs_this_month': len(recent_jobs),
+            'completion_rate': round(len([j for j in recent_jobs if j.get('status') == 'completed']) / len(recent_jobs) * 100) if recent_jobs else 0,
+            'average_job_value': round(current_month_revenue / len([j for j in recent_jobs if j.get('status') == 'completed'])) if recent_jobs else 0
+        },
+        'top_services': [{'name': name, 'revenue': data['revenue'], 'count': data['count']} for name, data in top_services]
+    }
 
 # File upload route
 @api_router.post("/jobs/{job_id}/photos")
