@@ -4,6 +4,7 @@ import axios from 'axios';
 import ClientsManagement from './components/ClientsManagement';
 import JobForm from './components/JobForm';
 import InvoicesManagement from './components/InvoicesManagement';
+import ReportsAnalytics from './components/ReportsAnalytics';
 
 // Create contexts
 const AuthContext = createContext();
