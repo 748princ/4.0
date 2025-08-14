@@ -477,9 +477,11 @@ def generate_invoice_pdf(invoice: dict, company: dict, client: dict, jobs: List[
     story.append(Paragraph(f"INVOICE #{invoice['invoice_number']}", invoice_title))
     
     # Invoice and client details
+    due_date_str = invoice['due_date'].strftime('%Y-%m-%d') if isinstance(invoice['due_date'], datetime) else datetime.fromisoformat(invoice['due_date'].replace('Z', '+00:00')).strftime('%Y-%m-%d')
+    
     details_data = [
         ['Invoice Date:', datetime.utcnow().strftime('%Y-%m-%d'), 'Bill To:', ''],
-        ['Due Date:', datetime.fromisoformat(invoice['due_date'].replace('Z', '+00:00')).strftime('%Y-%m-%d'), client['name'], ''],
+        ['Due Date:', due_date_str, client['name'], ''],
         ['Status:', invoice['status'].upper(), client.get('email', ''), ''],
         ['', '', client.get('phone', ''), ''],
         ['', '', client.get('address', ''), '']
