@@ -433,7 +433,7 @@ class JobberProAPITester:
             expected_status=400
         )
         
-        if not success4:
+        if success4:
             self.log_test("Invoice Status Updates", True, "- All status updates working correctly (sent, paid, overdue, invalid rejected)")
             return True
         else:
