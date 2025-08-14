@@ -507,10 +507,11 @@ def generate_invoice_pdf(invoice: dict, company: dict, client: dict, jobs: List[
     items_data = [['Job Description', 'Service Type', 'Date', 'Amount']]
     
     for job in jobs:
+        scheduled_date_str = job['scheduled_date'].strftime('%Y-%m-%d') if isinstance(job['scheduled_date'], datetime) else datetime.fromisoformat(job['scheduled_date'].replace('Z', '+00:00')).strftime('%Y-%m-%d')
         items_data.append([
             job['title'],
             job['service_type'],
-            datetime.fromisoformat(job['scheduled_date'].replace('Z', '+00:00')).strftime('%Y-%m-%d'),
+            scheduled_date_str,
             f"${job.get('actual_cost', job.get('estimated_cost', 0)):.2f}"
         ])
     
