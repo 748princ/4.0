@@ -19,6 +19,13 @@ import smtplib
 import stripe
 from dotenv import load_dotenv
 import json
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.pdfgen import canvas
+import io
 
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
