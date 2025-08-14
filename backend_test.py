@@ -539,6 +539,12 @@ class JobberProAPITester:
         self.test_update_job_status()
         self.test_jobs_filtering()
         
+        # Invoice Management Tests
+        self.test_create_invoice()
+        self.test_get_invoices()
+        self.test_invoice_status_updates()
+        self.test_invoice_pdf_generation()
+        
         # Cleanup
         self.cleanup_test_data()
         
