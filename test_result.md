@@ -164,6 +164,9 @@
         - working: true
         - agent: "testing"
         - comment: "COMPREHENSIVE TESTING COMPLETED: ✅ Invoice creation from multiple jobs works correctly ✅ Invoice calculations (subtotal, tax, discount, total) are accurate ✅ Get all invoices with company isolation works ✅ Invalid job IDs properly rejected during invoice creation ✅ Fixed critical bug in cost calculation (None value handling). Minor fix applied: Updated subtotal calculation to handle None values properly. All invoice functionality is working perfectly."
+        - working: true
+        - agent: "testing"
+        - comment: "ENHANCED INVOICE FUNCTIONALITY TESTING COMPLETED: ✅ Invoice Creation with user/company, client, and completed job setup works perfectly ✅ PDF Generation endpoint (/invoices/{invoice_id}/pdf) working correctly - returns proper PDF file with correct headers and invoice data ✅ Invoice Status Updates endpoint (/invoices/{invoice_id}/status) working perfectly - successfully updates to 'sent', 'paid', 'overdue' and properly rejects invalid statuses ✅ Invoice Listing returns all invoice data properly ✅ Fixed PDF generation bug with datetime formatting for due_date and scheduled_date fields ✅ Fixed cost formatting issue in PDF generation. All enhanced invoice functionality is working perfectly including the new PDF generation and status update features."
 
   - task: "Dashboard Analytics"
     implemented: true
