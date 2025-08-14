@@ -433,12 +433,12 @@ class JobberProAPITester:
             expected_status=400
         )
         
-        if success4:
+        if not success4:
+            self.log_test("Invoice Status Updates", True, "- All status updates working correctly (sent, paid, overdue, invalid rejected)")
+            return True
+        else:
             self.log_test("Invoice Status Updates", False, "- Invalid status was accepted (should have been rejected)")
             return False
-        
-        self.log_test("Invoice Status Updates", True, "- All status updates working correctly (sent, paid, overdue, invalid rejected)")
-        return True
 
     def test_invoice_pdf_generation(self) -> bool:
         """Test invoice PDF generation endpoint"""
