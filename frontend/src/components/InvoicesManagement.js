@@ -313,6 +313,45 @@ const InvoicesManagement = () => {
     fetchInvoices(); // Refresh to get updated data
   };
 
+  const handleDownloadPDF = async (invoiceId, invoiceNumber) => {
+    try {
+      const response = await api.get(`/invoices/${invoiceId}/pdf`, {
+        responseType: 'blob'
+      });
+      
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `invoice_${invoiceNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      alert('Invoice PDF downloaded successfully!');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleStatusUpdate = async (invoiceId, newStatus) => {
+    try {
+      await api.put(`/invoices/${invoiceId}/status?status=${newStatus}`);
+      fetchInvoices(); // Refresh to get updated data
+      alert(`Invoice status updated to ${newStatus}!`);
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Failed to update status: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
+  const handleSendInvoice = async (invoice, client) => {
+    // This will be implemented when we add email functionality
+    alert(`Send invoice feature coming soon!\n\nInvoice: ${invoice.invoice_number}\nClient: ${client?.name}\nAmount: $${invoice.total_amount.toFixed(2)}`);
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'paid': return 'bg-green-100 text-green-800';
