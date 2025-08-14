@@ -339,6 +339,150 @@ class JobberProAPITester:
             self.log_test("Jobs Filtering", False, f"- {response}")
             return False
 
+    def test_create_invoice(self) -> bool:
+        """Test invoice creation endpoint"""
+        print(f"\n🔍 Testing Invoice Creation...")
+        if not self.test_client_id or not self.test_job_id:
+            self.log_test("Invoice Creation", False, "- No test client or job available")
+            return False
+        
+        invoice_data = {
+            "client_id": self.test_client_id,
+            "job_ids": [self.test_job_id],
+            "due_date": (datetime.utcnow() + timedelta(days=30)).isoformat(),
+            "tax_rate": 0.08,
+            "discount_amount": 10.0,
+            "notes": "Test invoice for API testing"
+        }
+        
+        success, response = self.make_request(
+            'POST', '/invoices',
+            data=invoice_data,
+            expected_status=200
+        )
+        
+        if success and 'id' in response:
+            self.test_invoice_id = response['id']
+            self.log_test("Invoice Creation", True, f"- Invoice ID: {self.test_invoice_id}, Number: {response.get('invoice_number')}")
+            return True
+        else:
+            self.log_test("Invoice Creation", False, f"- {response}")
+            return False
+
+    def test_get_invoices(self) -> bool:
+        """Test get invoices endpoint"""
+        print(f"\n🔍 Testing Get Invoices...")
+        success, response = self.make_request('GET', '/invoices')
+        
+        if success:
+            if isinstance(response, list):
+                invoice_found = any(invoice.get('id') == self.test_invoice_id for invoice in response)
+                if invoice_found:
+                    self.log_test("Get Invoices", True, f"- Found {len(response)} invoices, test invoice included")
+                    return True
+                else:
+                    self.log_test("Get Invoices", False, f"- Test invoice not found in {len(response)} invoices")
+                    return False
+            else:
+                self.log_test("Get Invoices", False, f"- Expected list, got: {type(response)}")
+                return False
+        else:
+            self.log_test("Get Invoices", False, f"- {response}")
+            return False
+
+    def test_invoice_status_updates(self) -> bool:
+        """Test invoice status update endpoint"""
+        print(f"\n🔍 Testing Invoice Status Updates...")
+        if not self.test_invoice_id:
+            self.log_test("Invoice Status Updates", False, "- No test invoice available")
+            return False
+        
+        # Test updating to 'sent'
+        success1, response1 = self.make_request(
+            'PUT', f'/invoices/{self.test_invoice_id}/status?status=sent',
+            expected_status=200
+        )
+        
+        if not success1:
+            self.log_test("Invoice Status Updates", False, f"- Failed to update to 'sent': {response1}")
+            return False
+        
+        # Test updating to 'paid'
+        success2, response2 = self.make_request(
+            'PUT', f'/invoices/{self.test_invoice_id}/status?status=paid',
+            expected_status=200
+        )
+        
+        if not success2:
+            self.log_test("Invoice Status Updates", False, f"- Failed to update to 'paid': {response2}")
+            return False
+        
+        # Test updating to 'overdue'
+        success3, response3 = self.make_request(
+            'PUT', f'/invoices/{self.test_invoice_id}/status?status=overdue',
+            expected_status=200
+        )
+        
+        if not success3:
+            self.log_test("Invoice Status Updates", False, f"- Failed to update to 'overdue': {response3}")
+            return False
+        
+        # Test invalid status (should fail)
+        success4, response4 = self.make_request(
+            'PUT', f'/invoices/{self.test_invoice_id}/status?status=invalid_status',
+            expected_status=400
+        )
+        
+        if success4:
+            self.log_test("Invoice Status Updates", False, "- Invalid status was accepted (should have been rejected)")
+            return False
+        
+        self.log_test("Invoice Status Updates", True, "- All status updates working correctly (sent, paid, overdue, invalid rejected)")
+        return True
+
+    def test_invoice_pdf_generation(self) -> bool:
+        """Test invoice PDF generation endpoint"""
+        print(f"\n🔍 Testing Invoice PDF Generation...")
+        if not self.test_invoice_id:
+            self.log_test("Invoice PDF Generation", False, "- No test invoice available")
+            return False
+        
+        # Make request to PDF endpoint
+        url = f"{self.api_url}/invoices/{self.test_invoice_id}/pdf"
+        headers = {'Authorization': f'Bearer {self.token}'}
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=30)
+            
+            if response.status_code == 200:
+                # Check if response is PDF
+                content_type = response.headers.get('content-type', '')
+                content_disposition = response.headers.get('content-disposition', '')
+                
+                if 'application/pdf' in content_type:
+                    # Check if it has proper filename in headers
+                    if 'attachment' in content_disposition and 'invoice_' in content_disposition:
+                        # Check if PDF content is not empty
+                        if len(response.content) > 1000:  # PDF should be at least 1KB
+                            self.log_test("Invoice PDF Generation", True, f"- PDF generated successfully, size: {len(response.content)} bytes")
+                            return True
+                        else:
+                            self.log_test("Invoice PDF Generation", False, f"- PDF too small: {len(response.content)} bytes")
+                            return False
+                    else:
+                        self.log_test("Invoice PDF Generation", False, f"- Missing proper download headers: {content_disposition}")
+                        return False
+                else:
+                    self.log_test("Invoice PDF Generation", False, f"- Wrong content type: {content_type}")
+                    return False
+            else:
+                self.log_test("Invoice PDF Generation", False, f"- HTTP {response.status_code}: {response.text}")
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            self.log_test("Invoice PDF Generation", False, f"- Request failed: {str(e)}")
+            return False
+
     def cleanup_test_data(self) -> bool:
         """Clean up test data"""
         print(f"\n🧹 Cleaning up test data...")
