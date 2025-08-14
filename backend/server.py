@@ -434,6 +434,211 @@ async def get_invoices(current_user: dict = Depends(get_current_user)):
     invoices = await db.invoices.find({"company_id": current_user["company_id"]}).to_list(1000)
     return invoices
 
+def generate_invoice_pdf(invoice: dict, company: dict, client: dict, jobs: List[dict]) -> io.BytesIO:
+    """Generate PDF for an invoice."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=72, leftMargin=72, 
+                           topMargin=72, bottomMargin=18)
+    
+    # Get styles
+    styles = getSampleStyleSheet()
+    story = []
+    
+    # Company Header
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=24,
+        spaceAfter=30,
+        textColor=colors.HexColor('#1e40af')
+    )
+    
+    story.append(Paragraph(f"{company['name']}", title_style))
+    
+    # Company info
+    company_info = [
+        f"Email: {company.get('email', 'Not provided')}",
+        f"Phone: {company.get('phone', 'Not provided')}",
+        f"Address: {company.get('address', 'Not provided')}"
+    ]
+    
+    for info in company_info:
+        story.append(Paragraph(info, styles['Normal']))
+    
+    story.append(Spacer(1, 20))
+    
+    # Invoice title
+    invoice_title = ParagraphStyle(
+        'InvoiceTitle',
+        parent=styles['Heading2'],
+        fontSize=18,
+        spaceAfter=20
+    )
+    story.append(Paragraph(f"INVOICE #{invoice['invoice_number']}", invoice_title))
+    
+    # Invoice and client details
+    details_data = [
+        ['Invoice Date:', datetime.utcnow().strftime('%Y-%m-%d'), 'Bill To:', ''],
+        ['Due Date:', datetime.fromisoformat(invoice['due_date'].replace('Z', '+00:00')).strftime('%Y-%m-%d'), client['name'], ''],
+        ['Status:', invoice['status'].upper(), client.get('email', ''), ''],
+        ['', '', client.get('phone', ''), ''],
+        ['', '', client.get('address', ''), '']
+    ]
+    
+    details_table = Table(details_data, colWidths=[1.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+    details_table.setStyle(TableStyle([
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+        ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+        ('TOPPADDING', (0, 0), (-1, -1), 2),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+    ]))
+    
+    story.append(details_table)
+    story.append(Spacer(1, 30))
+    
+    # Job items table
+    items_data = [['Job Description', 'Service Type', 'Date', 'Amount']]
+    
+    for job in jobs:
+        items_data.append([
+            job['title'],
+            job['service_type'],
+            datetime.fromisoformat(job['scheduled_date'].replace('Z', '+00:00')).strftime('%Y-%m-%d'),
+            f"${job.get('actual_cost', job.get('estimated_cost', 0)):.2f}"
+        ])
+    
+    items_table = Table(items_data, colWidths=[2.5*inch, 1.5*inch, 1*inch, 1*inch])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f3f4f6')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('ALIGN', (-1, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    
+    story.append(items_table)
+    story.append(Spacer(1, 20))
+    
+    # Totals table
+    totals_data = [
+        ['Subtotal:', f"${invoice['subtotal']:.2f}"],
+        ['Tax:', f"${invoice['tax_amount']:.2f}"],
+    ]
+    
+    if invoice['discount_amount'] > 0:
+        totals_data.append(['Discount:', f"-${invoice['discount_amount']:.2f}"])
+    
+    totals_data.append(['TOTAL:', f"${invoice['total_amount']:.2f}"])
+    
+    totals_table = Table(totals_data, colWidths=[4*inch, 2*inch])
+    totals_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
+        ('FONTNAME', (0, 0), (-1, -2), 'Helvetica'),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('FONTSIZE', (0, -1), (-1, -1), 12),
+        ('LINEBELOW', (0, -1), (-1, -1), 2, colors.black),
+        ('TOPPADDING', (0, -1), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, -1), (-1, -1), 10),
+    ]))
+    
+    story.append(totals_table)
+    
+    # Notes
+    if invoice.get('notes'):
+        story.append(Spacer(1, 20))
+        story.append(Paragraph("Notes:", styles['Heading3']))
+        story.append(Paragraph(invoice['notes'], styles['Normal']))
+    
+    # Footer
+    story.append(Spacer(1, 30))
+    footer_style = ParagraphStyle(
+        'Footer',
+        parent=styles['Normal'],
+        fontSize=8,
+        textColor=colors.grey
+    )
+    story.append(Paragraph("Thank you for your business!", footer_style))
+    
+    # Build PDF
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+@api_router.get("/invoices/{invoice_id}/pdf")
+async def download_invoice_pdf(invoice_id: str, current_user: dict = Depends(get_current_user)):
+    """Download invoice as PDF."""
+    # Get invoice
+    invoice = await db.invoices.find_one({
+        "id": invoice_id,
+        "company_id": current_user["company_id"]
+    })
+    
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    # Get company info
+    company = await db.companies.find_one({"id": current_user["company_id"]})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Get client info
+    client = await db.clients.find_one({
+        "id": invoice["client_id"],
+        "company_id": current_user["company_id"]
+    })
+    
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    
+    # Get jobs
+    jobs = await db.jobs.find({
+        "id": {"$in": invoice["job_ids"]},
+        "company_id": current_user["company_id"]
+    }).to_list(100)
+    
+    # Generate PDF
+    pdf_buffer = generate_invoice_pdf(invoice, company, client, jobs)
+    
+    # Return as streaming response
+    return StreamingResponse(
+        io.BytesIO(pdf_buffer.read()),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=invoice_{invoice['invoice_number']}.pdf"}
+    )
+
+@api_router.put("/invoices/{invoice_id}/status")
+async def update_invoice_status(
+    invoice_id: str, 
+    status: str, 
+    current_user: dict = Depends(get_current_user)
+):
+    """Update invoice status."""
+    valid_statuses = ["pending", "sent", "paid", "overdue"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+    
+    result = await db.invoices.update_one(
+        {"id": invoice_id, "company_id": current_user["company_id"]},
+        {"$set": {"status": status, "paid_date": datetime.utcnow() if status == "paid" else None}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+    
+    return {"message": "Invoice status updated successfully"}
+
 # Dashboard Routes
 @api_router.get("/dashboard/stats")
 async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
