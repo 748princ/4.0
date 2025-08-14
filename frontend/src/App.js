@@ -3,6 +3,7 @@ import './App.css';
 import axios from 'axios';
 import ClientsManagement from './components/ClientsManagement';
 import JobForm from './components/JobForm';
+import InvoicesManagement from './components/InvoicesManagement';
 
 // Create contexts
 const AuthContext = createContext();
