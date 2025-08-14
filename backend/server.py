@@ -508,11 +508,12 @@ def generate_invoice_pdf(invoice: dict, company: dict, client: dict, jobs: List[
     
     for job in jobs:
         scheduled_date_str = job['scheduled_date'].strftime('%Y-%m-%d') if isinstance(job['scheduled_date'], datetime) else datetime.fromisoformat(job['scheduled_date'].replace('Z', '+00:00')).strftime('%Y-%m-%d')
+        cost = job.get('actual_cost') or job.get('estimated_cost') or 0
         items_data.append([
             job['title'],
             job['service_type'],
             scheduled_date_str,
-            f"${job.get('actual_cost', job.get('estimated_cost', 0)):.2f}"
+            f"${cost:.2f}"
         ])
     
     items_table = Table(items_data, colWidths=[2.5*inch, 1.5*inch, 1*inch, 1*inch])
