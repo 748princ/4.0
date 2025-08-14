@@ -472,15 +472,48 @@ const InvoicesManagement = () => {
                     </div>
                     
                     <div className="ml-6 space-y-2">
-                      <button className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm">
-                        View Details
+                      <button 
+                        onClick={() => handleDownloadPDF(invoice.id, invoice.invoice_number)}
+                        className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center justify-center"
+                      >
+                        📄 Download PDF
                       </button>
-                      <button className="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm">
-                        Download PDF
+                      
+                      <button 
+                        onClick={() => handleSendInvoice(invoice, client)}
+                        className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center justify-center"
+                      >
+                        📧 Send Invoice
                       </button>
-                      <button className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm">
-                        Send Invoice
-                      </button>
+                      
+                      <div className="flex space-x-1">
+                        {invoice.status === 'pending' && (
+                          <button 
+                            onClick={() => handleStatusUpdate(invoice.id, 'sent')}
+                            className="flex-1 bg-blue-600 text-white px-2 py-1 rounded text-xs hover:bg-blue-700 transition-colors"
+                          >
+                            Mark Sent
+                          </button>
+                        )}
+                        
+                        {(invoice.status === 'sent' || invoice.status === 'pending') && (
+                          <button 
+                            onClick={() => handleStatusUpdate(invoice.id, 'paid')}
+                            className="flex-1 bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 transition-colors"
+                          >
+                            Mark Paid
+                          </button>
+                        )}
+                        
+                        {invoice.status !== 'overdue' && (
+                          <button 
+                            onClick={() => handleStatusUpdate(invoice.id, 'overdue')}
+                            className="flex-1 bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 transition-colors"
+                          >
+                            Overdue
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
