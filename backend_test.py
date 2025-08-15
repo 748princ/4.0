@@ -487,6 +487,446 @@ class JobberProAPITester:
             self.log_test("Invoice PDF Generation", False, f"- Request failed: {str(e)}")
             return False
 
+    def test_create_technician(self) -> bool:
+        """Test technician creation endpoint"""
+        print(f"\n🔍 Testing Technician Creation...")
+        technician_data = {
+            "email": f"technician_{self.test_timestamp}@example.com",
+            "password": "TechPass123!",
+            "full_name": f"Test Technician {self.test_timestamp}",
+            "phone": "+1555123456",
+            "skills": ["Plumbing", "Electrical", "HVAC"],
+            "hourly_rate": 45.00,
+            "hire_date": datetime.utcnow().isoformat()
+        }
+        
+        success, response = self.make_request(
+            'POST', '/technicians',
+            data=technician_data,
+            expected_status=200
+        )
+        
+        if success and 'id' in response:
+            self.test_technician_id = response['id']
+            self.log_test("Technician Creation", True, f"- Technician ID: {self.test_technician_id}")
+            return True
+        else:
+            self.log_test("Technician Creation", False, f"- {response}")
+            return False
+
+    def test_get_technicians(self) -> bool:
+        """Test get technicians endpoint"""
+        print(f"\n🔍 Testing Get Technicians...")
+        success, response = self.make_request('GET', '/technicians')
+        
+        if success:
+            if isinstance(response, list):
+                technician_found = any(tech.get('id') == self.test_technician_id for tech in response)
+                if technician_found:
+                    self.log_test("Get Technicians", True, f"- Found {len(response)} technicians, test technician included")
+                    return True
+                else:
+                    self.log_test("Get Technicians", False, f"- Test technician not found in {len(response)} technicians")
+                    return False
+            else:
+                self.log_test("Get Technicians", False, f"- Expected list, got: {type(response)}")
+                return False
+        else:
+            self.log_test("Get Technicians", False, f"- {response}")
+            return False
+
+    def test_get_specific_technician(self) -> bool:
+        """Test get specific technician endpoint"""
+        print(f"\n🔍 Testing Get Specific Technician...")
+        if not self.test_technician_id:
+            self.log_test("Get Specific Technician", False, "- No test technician available")
+            return False
+        
+        success, response = self.make_request('GET', f'/technicians/{self.test_technician_id}')
+        
+        if success and response.get('id') == self.test_technician_id:
+            self.log_test("Get Specific Technician", True, f"- Retrieved technician: {response.get('full_name')}")
+            return True
+        else:
+            self.log_test("Get Specific Technician", False, f"- {response}")
+            return False
+
+    def test_update_technician(self) -> bool:
+        """Test technician update endpoint"""
+        print(f"\n🔍 Testing Technician Update...")
+        if not self.test_technician_id:
+            self.log_test("Technician Update", False, "- No test technician available")
+            return False
+        
+        update_data = {
+            "hourly_rate": 50.00,
+            "skills": ["Plumbing", "Electrical", "HVAC", "Carpentry"]
+        }
+        
+        success, response = self.make_request(
+            'PUT', f'/technicians/{self.test_technician_id}',
+            data=update_data,
+            expected_status=200
+        )
+        
+        if success and response.get('hourly_rate') == 50.00:
+            self.log_test("Technician Update", True, f"- Updated hourly rate and skills")
+            return True
+        else:
+            self.log_test("Technician Update", False, f"- {response}")
+            return False
+
+    def test_start_time_entry(self) -> bool:
+        """Test time entry creation (start tracking)"""
+        print(f"\n🔍 Testing Start Time Entry...")
+        if not self.test_job_id:
+            self.log_test("Start Time Entry", False, "- No test job available")
+            return False
+        
+        time_entry_data = {
+            "job_id": self.test_job_id,
+            "description": "Working on test job",
+            "is_billable": True
+        }
+        
+        success, response = self.make_request(
+            'POST', '/time-entries',
+            data=time_entry_data,
+            expected_status=200
+        )
+        
+        if success and 'id' in response:
+            self.test_time_entry_id = response['id']
+            self.log_test("Start Time Entry", True, f"- Time Entry ID: {self.test_time_entry_id}")
+            return True
+        else:
+            self.log_test("Start Time Entry", False, f"- {response}")
+            return False
+
+    def test_get_active_time_entry(self) -> bool:
+        """Test get active time entry endpoint"""
+        print(f"\n🔍 Testing Get Active Time Entry...")
+        success, response = self.make_request('GET', '/time-entries/active')
+        
+        if success:
+            if response and response.get('id') == self.test_time_entry_id:
+                self.log_test("Get Active Time Entry", True, f"- Found active entry: {response.get('id')}")
+                return True
+            elif response is None:
+                self.log_test("Get Active Time Entry", True, "- No active time entry (valid response)")
+                return True
+            else:
+                self.log_test("Get Active Time Entry", False, f"- Unexpected response: {response}")
+                return False
+        else:
+            self.log_test("Get Active Time Entry", False, f"- {response}")
+            return False
+
+    def test_stop_time_entry(self) -> bool:
+        """Test time entry update (stop tracking)"""
+        print(f"\n🔍 Testing Stop Time Entry...")
+        if not self.test_time_entry_id:
+            self.log_test("Stop Time Entry", False, "- No test time entry available")
+            return False
+        
+        update_data = {
+            "end_time": datetime.utcnow().isoformat(),
+            "break_duration": 15,
+            "description": "Completed work on test job"
+        }
+        
+        success, response = self.make_request(
+            'PUT', f'/time-entries/{self.test_time_entry_id}',
+            data=update_data,
+            expected_status=200
+        )
+        
+        if success and response.get('end_time'):
+            self.log_test("Stop Time Entry", True, f"- Time entry stopped successfully")
+            return True
+        else:
+            self.log_test("Stop Time Entry", False, f"- {response}")
+            return False
+
+    def test_get_time_entries(self) -> bool:
+        """Test get time entries with filtering"""
+        print(f"\n🔍 Testing Get Time Entries...")
+        success, response = self.make_request('GET', '/time-entries')
+        
+        if success:
+            if isinstance(response, list):
+                entry_found = any(entry.get('id') == self.test_time_entry_id for entry in response)
+                if entry_found:
+                    self.log_test("Get Time Entries", True, f"- Found {len(response)} time entries, test entry included")
+                    return True
+                else:
+                    self.log_test("Get Time Entries", False, f"- Test time entry not found in {len(response)} entries")
+                    return False
+            else:
+                self.log_test("Get Time Entries", False, f"- Expected list, got: {type(response)}")
+                return False
+        else:
+            self.log_test("Get Time Entries", False, f"- {response}")
+            return False
+
+    def test_job_time_entries(self) -> bool:
+        """Test get job time entries endpoint"""
+        print(f"\n🔍 Testing Job Time Entries...")
+        if not self.test_job_id:
+            self.log_test("Job Time Entries", False, "- No test job available")
+            return False
+        
+        success, response = self.make_request('GET', f'/jobs/{self.test_job_id}/time-entries')
+        
+        if success:
+            if isinstance(response, list):
+                self.log_test("Job Time Entries", True, f"- Found {len(response)} time entries for job")
+                return True
+            else:
+                self.log_test("Job Time Entries", False, f"- Expected list, got: {type(response)}")
+                return False
+        else:
+            self.log_test("Job Time Entries", False, f"- {response}")
+            return False
+
+    def test_job_total_time(self) -> bool:
+        """Test get job total time endpoint"""
+        print(f"\n🔍 Testing Job Total Time...")
+        if not self.test_job_id:
+            self.log_test("Job Total Time", False, "- No test job available")
+            return False
+        
+        success, response = self.make_request('GET', f'/jobs/{self.test_job_id}/total-time')
+        
+        if success:
+            required_fields = ['total_hours', 'billable_hours', 'total_minutes', 'billable_minutes']
+            missing_fields = [field for field in required_fields if field not in response]
+            
+            if not missing_fields:
+                self.log_test("Job Total Time", True, f"- Total: {response.get('total_hours')}h, Billable: {response.get('billable_hours')}h")
+                return True
+            else:
+                self.log_test("Job Total Time", False, f"- Missing fields: {missing_fields}")
+                return False
+        else:
+            self.log_test("Job Total Time", False, f"- {response}")
+            return False
+
+    def test_create_notification(self) -> bool:
+        """Test notification creation endpoint"""
+        print(f"\n🔍 Testing Notification Creation...")
+        notification_data = {
+            "user_id": self.user_data.get('id'),
+            "title": "Test Notification",
+            "message": f"This is a test notification created at {datetime.utcnow().isoformat()}",
+            "type": "info",
+            "entity_type": "job",
+            "entity_id": self.test_job_id
+        }
+        
+        success, response = self.make_request(
+            'POST', '/notifications',
+            data=notification_data,
+            expected_status=200
+        )
+        
+        if success and 'id' in response:
+            self.test_notification_id = response['id']
+            self.log_test("Notification Creation", True, f"- Notification ID: {self.test_notification_id}")
+            return True
+        else:
+            self.log_test("Notification Creation", False, f"- {response}")
+            return False
+
+    def test_get_notifications(self) -> bool:
+        """Test get notifications endpoint"""
+        print(f"\n🔍 Testing Get Notifications...")
+        success, response = self.make_request('GET', '/notifications')
+        
+        if success:
+            if isinstance(response, list):
+                notification_found = any(notif.get('id') == self.test_notification_id for notif in response)
+                if notification_found:
+                    self.log_test("Get Notifications", True, f"- Found {len(response)} notifications, test notification included")
+                    return True
+                else:
+                    self.log_test("Get Notifications", False, f"- Test notification not found in {len(response)} notifications")
+                    return False
+            else:
+                self.log_test("Get Notifications", False, f"- Expected list, got: {type(response)}")
+                return False
+        else:
+            self.log_test("Get Notifications", False, f"- {response}")
+            return False
+
+    def test_mark_notification_read(self) -> bool:
+        """Test mark notification as read endpoint"""
+        print(f"\n🔍 Testing Mark Notification Read...")
+        if not self.test_notification_id:
+            self.log_test("Mark Notification Read", False, "- No test notification available")
+            return False
+        
+        success, response = self.make_request(
+            'PUT', f'/notifications/{self.test_notification_id}/read',
+            expected_status=200
+        )
+        
+        if success:
+            self.log_test("Mark Notification Read", True, "- Notification marked as read")
+            return True
+        else:
+            self.log_test("Mark Notification Read", False, f"- {response}")
+            return False
+
+    def test_mark_all_notifications_read(self) -> bool:
+        """Test mark all notifications as read endpoint"""
+        print(f"\n🔍 Testing Mark All Notifications Read...")
+        success, response = self.make_request(
+            'PUT', '/notifications/mark-all-read',
+            expected_status=200
+        )
+        
+        if success:
+            self.log_test("Mark All Notifications Read", True, "- All notifications marked as read")
+            return True
+        else:
+            self.log_test("Mark All Notifications Read", False, f"- {response}")
+            return False
+
+    def test_create_custom_form(self) -> bool:
+        """Test custom form creation endpoint"""
+        print(f"\n🔍 Testing Custom Form Creation...")
+        form_data = {
+            "name": f"Test Form {self.test_timestamp}",
+            "description": "A test form for API testing",
+            "service_types": ["Maintenance", "Repair"],
+            "fields": [
+                {
+                    "name": "customer_satisfaction",
+                    "label": "Customer Satisfaction Rating",
+                    "type": "select",
+                    "required": True,
+                    "options": ["1", "2", "3", "4", "5"],
+                    "order": 1
+                },
+                {
+                    "name": "work_description",
+                    "label": "Work Description",
+                    "type": "textarea",
+                    "required": True,
+                    "order": 2
+                },
+                {
+                    "name": "completion_date",
+                    "label": "Completion Date",
+                    "type": "date",
+                    "required": False,
+                    "order": 3
+                }
+            ]
+        }
+        
+        success, response = self.make_request(
+            'POST', '/forms',
+            data=form_data,
+            expected_status=200
+        )
+        
+        if success and 'id' in response:
+            self.test_form_id = response['id']
+            self.log_test("Custom Form Creation", True, f"- Form ID: {self.test_form_id}")
+            return True
+        else:
+            self.log_test("Custom Form Creation", False, f"- {response}")
+            return False
+
+    def test_get_custom_forms(self) -> bool:
+        """Test get custom forms endpoint"""
+        print(f"\n🔍 Testing Get Custom Forms...")
+        success, response = self.make_request('GET', '/forms')
+        
+        if success:
+            if isinstance(response, list):
+                form_found = any(form.get('id') == self.test_form_id for form in response)
+                if form_found:
+                    self.log_test("Get Custom Forms", True, f"- Found {len(response)} forms, test form included")
+                    return True
+                else:
+                    self.log_test("Get Custom Forms", False, f"- Test form not found in {len(response)} forms")
+                    return False
+            else:
+                self.log_test("Get Custom Forms", False, f"- Expected list, got: {type(response)}")
+                return False
+        else:
+            self.log_test("Get Custom Forms", False, f"- {response}")
+            return False
+
+    def test_get_specific_custom_form(self) -> bool:
+        """Test get specific custom form endpoint"""
+        print(f"\n🔍 Testing Get Specific Custom Form...")
+        if not self.test_form_id:
+            self.log_test("Get Specific Custom Form", False, "- No test form available")
+            return False
+        
+        success, response = self.make_request('GET', f'/forms/{self.test_form_id}')
+        
+        if success and response.get('id') == self.test_form_id:
+            self.log_test("Get Specific Custom Form", True, f"- Retrieved form: {response.get('name')}")
+            return True
+        else:
+            self.log_test("Get Specific Custom Form", False, f"- {response}")
+            return False
+
+    def test_submit_custom_form(self) -> bool:
+        """Test custom form submission endpoint"""
+        print(f"\n🔍 Testing Custom Form Submission...")
+        if not self.test_form_id or not self.test_job_id:
+            self.log_test("Custom Form Submission", False, "- No test form or job available")
+            return False
+        
+        submission_data = {
+            "form_id": self.test_form_id,
+            "job_id": self.test_job_id,
+            "data": {
+                "customer_satisfaction": "5",
+                "work_description": "Completed maintenance work successfully. Customer was very satisfied.",
+                "completion_date": datetime.utcnow().date().isoformat()
+            }
+        }
+        
+        success, response = self.make_request(
+            'POST', f'/forms/{self.test_form_id}/submissions',
+            data=submission_data,
+            expected_status=200
+        )
+        
+        if success and 'id' in response:
+            self.log_test("Custom Form Submission", True, f"- Form submitted successfully")
+            return True
+        else:
+            self.log_test("Custom Form Submission", False, f"- {response}")
+            return False
+
+    def test_get_form_submissions(self) -> bool:
+        """Test get form submissions endpoint"""
+        print(f"\n🔍 Testing Get Form Submissions...")
+        if not self.test_form_id:
+            self.log_test("Get Form Submissions", False, "- No test form available")
+            return False
+        
+        success, response = self.make_request('GET', f'/forms/{self.test_form_id}/submissions')
+        
+        if success:
+            if isinstance(response, list):
+                self.log_test("Get Form Submissions", True, f"- Found {len(response)} submissions for form")
+                return True
+            else:
+                self.log_test("Get Form Submissions", False, f"- Expected list, got: {type(response)}")
+                return False
+        else:
+            self.log_test("Get Form Submissions", False, f"- {response}")
+            return False
+
     def cleanup_test_data(self) -> bool:
         """Clean up test data"""
         print(f"\n🧹 Cleaning up test data...")
