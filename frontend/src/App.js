@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import './App.css';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import axios from 'axios';
 import { Toaster } from 'react-hot-toast';
 import ClientsManagement from './components/ClientsManagement';
