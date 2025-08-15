@@ -755,6 +755,8 @@ const MainApp = () => {
         return <TeamManagement user={user} />;
       case 'time':
         return <TimeTracking user={user} />;
+      case 'forms':
+        return <CustomForms user={user} />;
       case 'invoices':
         return <InvoicesManagement />;
       case 'notifications':
