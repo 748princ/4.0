@@ -675,8 +675,12 @@ const MainApp = () => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'jobs', label: 'Jobs', icon: '🔧' },
+    { id: 'calendar', label: 'Calendar', icon: '📅' },
     { id: 'clients', label: 'Clients', icon: '👥' },
+    { id: 'team', label: 'Team', icon: '👨‍💼' },
+    { id: 'time', label: 'Time Tracking', icon: '⏱️' },
     { id: 'invoices', label: 'Invoices', icon: '💰' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'reports', label: 'Reports', icon: '📈' }
   ];
 
