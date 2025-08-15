@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useContext, createContext } from 'react';
 import './App.css';
 import axios from 'axios';
+import { Toaster } from 'react-hot-toast';
 import ClientsManagement from './components/ClientsManagement';
 import JobForm from './components/JobForm';
 import InvoicesManagement from './components/InvoicesManagement';
 import ReportsAnalytics from './components/ReportsAnalytics';
+import CalendarView from './components/CalendarView';
+import TeamManagement from './components/TeamManagement';
+import TimeTracking from './components/TimeTracking';
+import NotificationsManagement, { NotificationsProvider, NotificationBell } from './components/Notifications';
 
 // Create contexts
 const AuthContext = createContext();
