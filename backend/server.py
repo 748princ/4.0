@@ -168,6 +168,128 @@ class Invoice(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
+# Enhanced User Management Models
+class TechnicianCreate(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str
+    phone: Optional[str] = None
+    skills: List[str] = []
+    hourly_rate: Optional[float] = None
+    hire_date: Optional[datetime] = None
+
+class Technician(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: EmailStr
+    full_name: str
+    company_id: str
+    role: str = "technician"
+    phone: Optional[str] = None
+    skills: List[str] = []
+    hourly_rate: Optional[float] = None
+    hire_date: Optional[datetime] = None
+    is_active: bool = True
+    total_jobs_completed: int = 0
+    average_rating: float = 0.0
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+# Time Tracking Models
+class TimeEntry(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    job_id: str
+    technician_id: str
+    company_id: str
+    start_time: datetime
+    end_time: Optional[datetime] = None
+    break_duration: int = 0  # in minutes
+    description: Optional[str] = None
+    is_billable: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class TimeEntryCreate(BaseModel):
+    job_id: str
+    description: Optional[str] = None
+    is_billable: bool = True
+
+class TimeEntryUpdate(BaseModel):
+    end_time: Optional[datetime] = None
+    break_duration: Optional[int] = None
+    description: Optional[str] = None
+    is_billable: Optional[bool] = None
+
+# Notification Models
+class Notification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    company_id: str
+    title: str
+    message: str
+    type: str = "info"  # info, success, warning, error
+    entity_type: Optional[str] = None  # job, invoice, client, etc.
+    entity_id: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class NotificationCreate(BaseModel):
+    user_id: str
+    title: str
+    message: str
+    type: str = "info"
+    entity_type: Optional[str] = None
+    entity_id: Optional[str] = None
+
+# Custom Forms Models
+class FormField(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    label: str
+    type: str  # text, textarea, select, checkbox, radio, date, number
+    required: bool = False
+    options: List[str] = []  # for select, radio, checkbox
+    validation: Dict[str, Any] = {}
+    order: int = 0
+
+class CustomForm(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    description: Optional[str] = None
+    company_id: str
+    service_types: List[str] = []  # which service types this form applies to
+    fields: List[FormField] = []
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class FormFieldCreate(BaseModel):
+    name: str
+    label: str
+    type: str
+    required: bool = False
+    options: List[str] = []
+    validation: Dict[str, Any] = {}
+    order: int = 0
+
+class CustomFormCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    service_types: List[str] = []
+    fields: List[FormFieldCreate] = []
+
+class FormSubmission(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    form_id: str
+    job_id: str
+    technician_id: str
+    company_id: str
+    data: Dict[str, Any] = {}
+    submitted_at: datetime = Field(default_factory=datetime.utcnow)
+
+class FormSubmissionCreate(BaseModel):
+    form_id: str
+    job_id: str
+    data: Dict[str, Any] = {}
+
 # Utility Functions
 def hash_password(password: str) -> str:
     """Hash a password for storing."""
