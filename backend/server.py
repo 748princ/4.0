@@ -1108,6 +1108,315 @@ async def upload_job_photo(
     
     return {"message": "Photo uploaded successfully", "filename": filename}
 
+# Team Management Routes
+@api_router.post("/technicians", response_model=Technician)
+async def create_technician(technician_data: TechnicianCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new technician."""
+    # Check if user already exists
+    existing_user = await db.users.find_one({"email": technician_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Create technician user
+    hashed_password = hash_password(technician_data.password)
+    technician = Technician(**technician_data.dict(exclude={"password"}), company_id=current_user["company_id"])
+    
+    # Save to users collection with technician role
+    user_dict = technician.dict()
+    user_dict["password"] = hashed_password
+    await db.users.insert_one(user_dict)
+    
+    return technician
+
+@api_router.get("/technicians", response_model=List[Technician])
+async def get_technicians(current_user: dict = Depends(get_current_user)):
+    """Get all technicians for current company."""
+    technicians = await db.users.find({
+        "company_id": current_user["company_id"], 
+        "role": "technician"
+    }).to_list(1000)
+    return technicians
+
+@api_router.get("/technicians/{technician_id}", response_model=Technician)
+async def get_technician(technician_id: str, current_user: dict = Depends(get_current_user)):
+    """Get specific technician."""
+    technician = await db.users.find_one({
+        "id": technician_id, 
+        "company_id": current_user["company_id"], 
+        "role": "technician"
+    })
+    if not technician:
+        raise HTTPException(status_code=404, detail="Technician not found")
+    return technician
+
+@api_router.put("/technicians/{technician_id}", response_model=Technician)
+async def update_technician(
+    technician_id: str, 
+    technician_data: dict, 
+    current_user: dict = Depends(get_current_user)
+):
+    """Update technician."""
+    update_data = {k: v for k, v in technician_data.items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    result = await db.users.update_one(
+        {"id": technician_id, "company_id": current_user["company_id"], "role": "technician"},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Technician not found")
+    
+    updated_technician = await db.users.find_one({
+        "id": technician_id, 
+        "company_id": current_user["company_id"], 
+        "role": "technician"
+    })
+    return updated_technician
+
+# Time Tracking Routes
+@api_router.post("/time-entries", response_model=TimeEntry)
+async def start_time_entry(time_data: TimeEntryCreate, current_user: dict = Depends(get_current_user)):
+    """Start a new time entry."""
+    # Check if job exists
+    job = await db.jobs.find_one({"id": time_data.job_id, "company_id": current_user["company_id"]})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Check if there's already an active time entry for this user
+    active_entry = await db.time_entries.find_one({
+        "technician_id": current_user["id"],
+        "end_time": None,
+        "company_id": current_user["company_id"]
+    })
+    
+    if active_entry:
+        raise HTTPException(status_code=400, detail="You already have an active time entry. Please stop it first.")
+    
+    time_entry = TimeEntry(
+        **time_data.dict(),
+        technician_id=current_user["id"],
+        company_id=current_user["company_id"],
+        start_time=datetime.utcnow()
+    )
+    
+    await db.time_entries.insert_one(time_entry.dict())
+    return time_entry
+
+@api_router.put("/time-entries/{entry_id}", response_model=TimeEntry)
+async def update_time_entry(
+    entry_id: str, 
+    time_data: TimeEntryUpdate, 
+    current_user: dict = Depends(get_current_user)
+):
+    """Update/stop a time entry."""
+    update_data = {k: v for k, v in time_data.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.utcnow()
+    
+    result = await db.time_entries.update_one(
+        {"id": entry_id, "technician_id": current_user["id"], "company_id": current_user["company_id"]},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+    
+    updated_entry = await db.time_entries.find_one({"id": entry_id})
+    return updated_entry
+
+@api_router.get("/time-entries", response_model=List[TimeEntry])
+async def get_time_entries(
+    job_id: Optional[str] = None,
+    technician_id: Optional[str] = None,
+    date_from: Optional[datetime] = None,
+    date_to: Optional[datetime] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get time entries with optional filtering."""
+    filter_dict = {"company_id": current_user["company_id"]}
+    
+    if job_id:
+        filter_dict["job_id"] = job_id
+    if technician_id:
+        filter_dict["technician_id"] = technician_id
+    if date_from or date_to:
+        date_filter = {}
+        if date_from:
+            date_filter["$gte"] = date_from
+        if date_to:
+            date_filter["$lte"] = date_to
+        filter_dict["start_time"] = date_filter
+    
+    time_entries = await db.time_entries.find(filter_dict).sort("start_time", -1).to_list(1000)
+    return time_entries
+
+@api_router.get("/time-entries/active", response_model=Optional[TimeEntry])
+async def get_active_time_entry(current_user: dict = Depends(get_current_user)):
+    """Get current user's active time entry."""
+    active_entry = await db.time_entries.find_one({
+        "technician_id": current_user["id"],
+        "end_time": None,
+        "company_id": current_user["company_id"]
+    })
+    return active_entry
+
+# Notification Routes
+@api_router.post("/notifications", response_model=Notification)
+async def create_notification(notification_data: NotificationCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new notification."""
+    notification = Notification(**notification_data.dict(), company_id=current_user["company_id"])
+    await db.notifications.insert_one(notification.dict())
+    return notification
+
+@api_router.get("/notifications", response_model=List[Notification])
+async def get_notifications(
+    unread_only: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get notifications for current user."""
+    filter_dict = {"user_id": current_user["id"], "company_id": current_user["company_id"]}
+    if unread_only:
+        filter_dict["is_read"] = False
+    
+    notifications = await db.notifications.find(filter_dict).sort("created_at", -1).to_list(100)
+    return notifications
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
+    """Mark notification as read."""
+    result = await db.notifications.update_one(
+        {"id": notification_id, "user_id": current_user["id"], "company_id": current_user["company_id"]},
+        {"$set": {"is_read": True}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    
+    return {"message": "Notification marked as read"}
+
+@api_router.put("/notifications/mark-all-read")
+async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
+    """Mark all notifications as read."""
+    await db.notifications.update_many(
+        {"user_id": current_user["id"], "company_id": current_user["company_id"], "is_read": False},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "All notifications marked as read"}
+
+# Custom Forms Routes  
+@api_router.post("/forms", response_model=CustomForm)
+async def create_custom_form(form_data: CustomFormCreate, current_user: dict = Depends(get_current_user)):
+    """Create a new custom form."""
+    form = CustomForm(**form_data.dict(), company_id=current_user["company_id"])
+    await db.custom_forms.insert_one(form.dict())
+    return form
+
+@api_router.get("/forms", response_model=List[CustomForm])
+async def get_custom_forms(current_user: dict = Depends(get_current_user)):
+    """Get all custom forms for current company."""
+    forms = await db.custom_forms.find({"company_id": current_user["company_id"]}).to_list(100)
+    return forms
+
+@api_router.get("/forms/{form_id}", response_model=CustomForm)
+async def get_custom_form(form_id: str, current_user: dict = Depends(get_current_user)):
+    """Get specific custom form."""
+    form = await db.custom_forms.find_one({"id": form_id, "company_id": current_user["company_id"]})
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    return form
+
+@api_router.post("/forms/{form_id}/submissions", response_model=FormSubmission)
+async def submit_form(
+    form_id: str, 
+    submission_data: FormSubmissionCreate, 
+    current_user: dict = Depends(get_current_user)
+):
+    """Submit a form for a job."""
+    # Verify form exists
+    form = await db.custom_forms.find_one({"id": form_id, "company_id": current_user["company_id"]})
+    if not form:
+        raise HTTPException(status_code=404, detail="Form not found")
+    
+    # Verify job exists
+    job = await db.jobs.find_one({"id": submission_data.job_id, "company_id": current_user["company_id"]})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    submission = FormSubmission(
+        form_id=form_id,
+        job_id=submission_data.job_id,
+        technician_id=current_user["id"],
+        company_id=current_user["company_id"],
+        data=submission_data.data
+    )
+    
+    await db.form_submissions.insert_one(submission.dict())
+    return submission
+
+@api_router.get("/forms/{form_id}/submissions", response_model=List[FormSubmission])
+async def get_form_submissions(form_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all submissions for a form."""
+    submissions = await db.form_submissions.find({
+        "form_id": form_id, 
+        "company_id": current_user["company_id"]
+    }).to_list(1000)
+    return submissions
+
+# Enhanced Job Routes with Time Tracking
+@api_router.get("/jobs/{job_id}/time-entries", response_model=List[TimeEntry])
+async def get_job_time_entries(job_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all time entries for a specific job."""
+    # Verify job exists
+    job = await db.jobs.find_one({"id": job_id, "company_id": current_user["company_id"]})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    time_entries = await db.time_entries.find({
+        "job_id": job_id,
+        "company_id": current_user["company_id"]
+    }).to_list(1000)
+    
+    return time_entries
+
+@api_router.get("/jobs/{job_id}/total-time")
+async def get_job_total_time(job_id: str, current_user: dict = Depends(get_current_user)):
+    """Get total time spent on a job."""
+    # Verify job exists
+    job = await db.jobs.find_one({"id": job_id, "company_id": current_user["company_id"]})
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    time_entries = await db.time_entries.find({
+        "job_id": job_id,
+        "company_id": current_user["company_id"]
+    }).to_list(1000)
+    
+    total_minutes = 0
+    billable_minutes = 0
+    
+    for entry in time_entries:
+        if entry.get("end_time"):
+            start = entry["start_time"]
+            end = entry["end_time"]
+            if isinstance(start, str):
+                start = datetime.fromisoformat(start.replace('Z', '+00:00'))
+            if isinstance(end, str):
+                end = datetime.fromisoformat(end.replace('Z', '+00:00'))
+            
+            duration_minutes = (end - start).total_seconds() / 60
+            duration_minutes -= entry.get("break_duration", 0)
+            
+            total_minutes += duration_minutes
+            if entry.get("is_billable", True):
+                billable_minutes += duration_minutes
+    
+    return {
+        "total_hours": round(total_minutes / 60, 2),
+        "billable_hours": round(billable_minutes / 60, 2),
+        "total_minutes": int(total_minutes),
+        "billable_minutes": int(billable_minutes)
+    }
+
 # Delete routes
 @api_router.delete("/clients/{client_id}")
 async def delete_client(client_id: str, current_user: dict = Depends(get_current_user)):
