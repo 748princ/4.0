@@ -22,6 +22,10 @@ class JobberProAPITester:
         self.test_client_id = None
         self.test_job_id = None
         self.test_invoice_id = None
+        self.test_technician_id = None
+        self.test_time_entry_id = None
+        self.test_notification_id = None
+        self.test_form_id = None
         
         # Test data
         self.test_timestamp = datetime.now().strftime('%H%M%S')
