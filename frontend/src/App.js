@@ -744,10 +744,18 @@ const MainApp = () => {
         );
       case 'jobs':
         return <JobsManagement />;
+      case 'calendar':
+        return <CalendarView user={user} />;
       case 'clients':
         return <ClientsManagement />;
+      case 'team':
+        return <TeamManagement user={user} />;
+      case 'time':
+        return <TimeTracking user={user} />;
       case 'invoices':
         return <InvoicesManagement />;
+      case 'notifications':
+        return <NotificationsManagement />;
       case 'reports':
         return <ReportsAnalytics />;
       default:
