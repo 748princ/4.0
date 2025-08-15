@@ -989,6 +989,33 @@ class JobberProAPITester:
         self.test_invoice_status_updates()
         self.test_invoice_pdf_generation()
         
+        # Team Management Tests (New Features)
+        self.test_create_technician()
+        self.test_get_technicians()
+        self.test_get_specific_technician()
+        self.test_update_technician()
+        
+        # Time Tracking Tests (New Features)
+        self.test_start_time_entry()
+        self.test_get_active_time_entry()
+        self.test_stop_time_entry()
+        self.test_get_time_entries()
+        self.test_job_time_entries()
+        self.test_job_total_time()
+        
+        # Notification Tests (New Features)
+        self.test_create_notification()
+        self.test_get_notifications()
+        self.test_mark_notification_read()
+        self.test_mark_all_notifications_read()
+        
+        # Custom Forms Tests (New Features)
+        self.test_create_custom_form()
+        self.test_get_custom_forms()
+        self.test_get_specific_custom_form()
+        self.test_submit_custom_form()
+        self.test_get_form_submissions()
+        
         # Cleanup
         self.cleanup_test_data()
         
