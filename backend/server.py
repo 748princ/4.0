@@ -1453,6 +1453,14 @@ async def startup_db_client():
     await db.clients.create_index([("company_id", 1), ("email", 1)])
     await db.jobs.create_index([("company_id", 1), ("status", 1), ("scheduled_date", 1)])
     await db.invoices.create_index([("company_id", 1), ("status", 1)])
+    
+    # New indexes for enhanced features
+    await db.time_entries.create_index([("company_id", 1), ("technician_id", 1), ("job_id", 1)])
+    await db.time_entries.create_index([("technician_id", 1), ("end_time", 1)])  # for active entries
+    await db.notifications.create_index([("user_id", 1), ("company_id", 1), ("created_at", -1)])
+    await db.notifications.create_index([("user_id", 1), ("is_read", 1)])
+    await db.custom_forms.create_index([("company_id", 1), ("service_types", 1)])
+    await db.form_submissions.create_index([("company_id", 1), ("form_id", 1), ("job_id", 1)])
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
