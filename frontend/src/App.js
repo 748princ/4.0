@@ -681,6 +681,7 @@ const MainApp = () => {
     { id: 'clients', label: 'Clients', icon: '👥' },
     { id: 'team', label: 'Team', icon: '👨‍💼' },
     { id: 'time', label: 'Time Tracking', icon: '⏱️' },
+    { id: 'forms', label: 'Custom Forms', icon: '📋' },
     { id: 'invoices', label: 'Invoices', icon: '💰' },
     { id: 'notifications', label: 'Notifications', icon: '🔔' },
     { id: 'reports', label: 'Reports', icon: '📈' }
