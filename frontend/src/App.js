@@ -814,9 +814,16 @@ const MainApp = () => {
         <div className="flex items-center justify-between px-6 h-full">
           <h2 className="text-xl font-semibold text-gray-800 capitalize">{currentPage}</h2>
           <div className="flex items-center space-x-4">
+            <NotificationBell />
             <div className="text-sm text-gray-600">
               {user.company_name}
             </div>
+            <button
+              onClick={logout}
+              className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </div>
