@@ -1015,11 +1015,17 @@ const App = () => {
 
 const AppContent = () => {
   const { user, loading } = useAuth();
+  const { isDarkMode } = useTheme();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-pulse text-lg">Loading...</div>
+      <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${
+        isDarkMode ? 'bg-gray-900' : 'bg-gray-50'
+      }`}>
+        <LoadingSpinner
+          size="lg"
+          text="Loading Jobber Pro..."
+        />
       </div>
     );
   }
