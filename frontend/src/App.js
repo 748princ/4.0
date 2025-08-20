@@ -115,7 +115,7 @@ const useAuth = () => {
   return context;
 };
 
-// Login Component
+// Enhanced Login Component
 const LoginForm = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
@@ -128,6 +128,7 @@ const LoginForm = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
+  const { isDarkMode } = useTheme();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -157,126 +158,178 @@ const LoginForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Jobber Pro</h1>
-          <p className="text-gray-600 mt-2">Field Service Management Platform</p>
-        </div>
-
-        <div className="flex mb-6 bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setIsLogin(true)}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              isLogin ? 'bg-white text-blue-600 shadow' : 'text-gray-500'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => setIsLogin(false)}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              !isLogin ? 'bg-white text-blue-600 shadow' : 'text-gray-500'
-            }`}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
+    <div className={`min-h-screen flex items-center justify-center p-4 transition-colors duration-300 ${
+      isDarkMode 
+        ? 'bg-gradient-to-br from-gray-900 to-gray-800' 
+        : 'bg-gradient-to-br from-blue-600 to-blue-800'
+    }`}>
+      <ResponsiveContainer maxWidth="md" padding={false}>
+        <Card className="max-w-md mx-auto animate-fade-in" shadow={true}>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center mb-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                isDarkMode ? 'bg-blue-600' : 'bg-blue-600'
+              }`}>
+                <span className="text-2xl">🔧</span>
+              </div>
+            </div>
+            <h1 className={`text-3xl font-bold ${
+              isDarkMode ? 'text-gray-100' : 'text-gray-900'
+            }`}>
+              Jobber Pro
+            </h1>
+            <p className={`mt-2 ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-600'
+            }`}>
+              Field Service Management Platform
+            </p>
           </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Full Name
-                </label>
-                <input
+          {/* Theme Toggle */}
+          <div className="flex justify-end mb-6">
+            <ThemeToggle />
+          </div>
+
+          {/* Tab Toggle */}
+          <div className={`flex mb-6 p-1 rounded-lg ${
+            isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
+          }`}>
+            <button
+              onClick={() => setIsLogin(true)}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                isLogin 
+                  ? (isDarkMode 
+                      ? 'bg-gray-600 text-white shadow-md' 
+                      : 'bg-white text-blue-600 shadow-md')
+                  : (isDarkMode 
+                      ? 'text-gray-400 hover:text-gray-200' 
+                      : 'text-gray-500 hover:text-gray-700')
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              onClick={() => setIsLogin(false)}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                !isLogin 
+                  ? (isDarkMode 
+                      ? 'bg-gray-600 text-white shadow-md' 
+                      : 'bg-white text-blue-600 shadow-md')
+                  : (isDarkMode 
+                      ? 'text-gray-400 hover:text-gray-200' 
+                      : 'text-gray-500 hover:text-gray-700')
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className={`mb-4 p-3 rounded-md border animate-slide-down ${
+              isDarkMode 
+                ? 'bg-red-900/20 border-red-500 text-red-300' 
+                : 'bg-red-100 border-red-400 text-red-700'
+            }`}>
+              {error}
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <>
+                <Input
+                  label="Full Name"
                   type="text"
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required={!isLogin}
+                  placeholder="Enter your full name"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Company Name
-                </label>
-                <input
+                
+                <Input
+                  label="Company Name"
                   type="text"
                   name="company_name"
                   value={formData.company_name}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required={!isLogin}
+                  placeholder="Enter your company name"
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone (Optional)
-                </label>
-                <input
+                
+                <Input
+                  label="Phone"
                   type="tel"
                   name="phone"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter your phone number (optional)"
+                  helperText="Optional - for account recovery and notifications"
                 />
-              </div>
-            </>
-          )}
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
+              </>
+            )}
+            
+            <Input
+              label="Email"
               type="email"
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              placeholder="Enter your email address"
             />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
+            
+            <Input
+              label="Password"
               type="password"
               name="password"
               value={formData.password}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              placeholder="Enter your password"
+              helperText={!isLogin ? "Minimum 6 characters" : ""}
             />
-          </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Create Account')}
-          </button>
-        </form>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={loading}
+              disabled={loading}
+              className="mt-6"
+            >
+              {isLogin ? 'Sign In' : 'Create Account'}
+            </Button>
+          </form>
 
-        {isLogin && (
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Demo Account:</p>
-            <p>Email: demo@example.com | Password: demo123</p>
-          </div>
-        )}
-      </div>
+          {/* Demo Credentials */}
+          {isLogin && (
+            <Card className={`mt-6 ${
+              isDarkMode ? 'bg-gray-700' : 'bg-gray-50'
+            }`} padding={true}>
+              <h4 className={`text-sm font-medium mb-2 ${
+                isDarkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Demo Credentials:
+              </h4>
+              <p className={`text-sm ${
+                isDarkMode ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+                Email: demo@example.com
+              </p>
+              <p className={`text-sm ${
+                isDarkMode ? 'text-gray-400' : 'text-gray-600'
+              }`}>
+                Password: demo123
+              </p>
+            </Card>
+          )}
+        </Card>
+      </ResponsiveContainer>
     </div>
   );
 };
