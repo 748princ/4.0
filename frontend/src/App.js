@@ -22,7 +22,7 @@ import Card from './components/ui/Card';
 import MobileMenu from './components/ui/MobileMenu';
 import ResponsiveContainer from './components/ui/ResponsiveContainer';
 import Input from './components/ui/Input';
-import Modal from './components/ui/Modal';
+import EnhancedModal from './components/ui/Modal';
 
 // Create contexts
 const AuthContext = createContext();
