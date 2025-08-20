@@ -733,10 +733,12 @@ const JobsManagement = () => {
   );
 };
 
-// Main App Component
+// Enhanced Main App Component
 const MainApp = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useAuth();
+  const { isDarkMode } = useTheme();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -755,21 +757,28 @@ const MainApp = () => {
     switch (currentPage) {
       case 'dashboard':
         return (
-          <div className="space-y-6">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg p-8 text-white">
+          <div className="space-y-6 animate-fade-in">
+            <Card className={`p-8 ${
+              isDarkMode 
+                ? 'bg-gradient-to-r from-blue-600 to-blue-800' 
+                : 'bg-gradient-to-r from-blue-600 to-blue-800'
+            } text-white shadow-xl`}>
               <div className="relative z-10">
                 <h1 className="text-3xl font-bold mb-2">Welcome back, {user.full_name}!</h1>
                 <p className="text-blue-100 mb-6">Here's what's happening with {user.company_name} today</p>
-                <div className="flex space-x-4">
-                  <button 
+                <div className="flex flex-wrap gap-4">
+                  <Button 
                     onClick={() => setCurrentPage('jobs')}
-                    className="bg-white text-blue-600 px-6 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors"
+                    variant="secondary"
+                    size="md"
+                    className="bg-white text-blue-600 hover:bg-gray-100"
                   >
+                    <span className="mr-2">🔧</span>
                     Schedule New Job
-                  </button>
+                  </Button>
                 </div>
               </div>
-            </div>
+            </Card>
 
             <DashboardStats />
             
@@ -779,32 +788,40 @@ const MainApp = () => {
               </div>
               
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-md p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-                  <div className="space-y-3">
-                    <button 
+                <Card>
+                  <Card.Header>
+                    <Card.Title>Quick Actions</Card.Title>
+                  </Card.Header>
+                  <Card.Content className="space-y-3">
+                    <Button 
                       onClick={() => setCurrentPage('jobs')}
-                      className="w-full bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 transition-colors text-left flex items-center"
+                      variant="primary"
+                      fullWidth
+                      className="justify-start"
                     >
                       <span className="text-xl mr-3">🔧</span>
                       Create New Job
-                    </button>
-                    <button 
+                    </Button>
+                    <Button 
                       onClick={() => setCurrentPage('clients')}
-                      className="w-full bg-green-600 text-white p-3 rounded-lg hover:bg-green-700 transition-colors text-left flex items-center"
+                      variant="success"
+                      fullWidth
+                      className="justify-start"
                     >
                       <span className="text-xl mr-3">👥</span>
                       Add Client
-                    </button>
-                    <button 
+                    </Button>
+                    <Button 
                       onClick={() => setCurrentPage('invoices')}
-                      className="w-full bg-purple-600 text-white p-3 rounded-lg hover:bg-purple-700 transition-colors text-left flex items-center"
+                      variant="warning"
+                      fullWidth
+                      className="justify-start"
                     >
                       <span className="text-xl mr-3">💰</span>
                       Create Invoice
-                    </button>
-                  </div>
-                </div>
+                    </Button>
+                  </Card.Content>
+                </Card>
               </div>
             </div>
           </div>
@@ -829,33 +846,56 @@ const MainApp = () => {
         return <ReportsAnalytics />;
       default:
         return (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Coming Soon</h2>
-            <p className="text-gray-600">This feature is under development.</p>
-          </div>
+          <Card className="text-center p-8">
+            <div className="mb-4 text-6xl">🚧</div>
+            <Card.Title className="mb-4">Coming Soon</Card.Title>
+            <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+              This feature is under development.
+            </p>
+          </Card>
         );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className="bg-gray-900 text-white h-screen w-64 fixed left-0 top-0 z-50">
+    <div className={`min-h-screen transition-colors duration-300 ${
+      isDarkMode ? 'bg-gray-900' : 'bg-gray-50'
+    }`}>
+      {/* Mobile Menu */}
+      <MobileMenu
+        isOpen={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        menuItems={menuItems}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
+        user={user}
+        onLogout={logout}
+      />
+
+      {/* Desktop Sidebar */}
+      <div className={`hidden md:block h-screen w-64 fixed left-0 top-0 z-40 transition-colors duration-300 ${
+        isDarkMode ? 'bg-gray-900 border-gray-700' : 'bg-gray-900'
+      } text-white border-r`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <h1 className="text-xl font-bold text-blue-400">Jobber Pro</h1>
+          <ThemeToggle />
         </div>
         
-        <nav className="mt-6">
+        <nav className="mt-6 px-4">
           {menuItems.map(item => (
             <button
               key={item.id}
               onClick={() => setCurrentPage(item.id)}
-              className={`w-full flex items-center px-4 py-3 text-left hover:bg-gray-800 transition-colors ${
-                currentPage === item.id ? 'bg-blue-600 border-r-4 border-blue-400' : ''
-              }`}
+              className={`
+                w-full flex items-center px-4 py-3 text-left rounded-md transition-all duration-200 mb-2
+                ${currentPage === item.id
+                  ? 'bg-blue-600 text-white shadow-md border-r-4 border-blue-400' 
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                }
+              `}
             >
               <span className="text-xl mr-3">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="font-medium">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -867,39 +907,84 @@ const MainApp = () => {
                 <p className="text-sm font-medium">{user.full_name}</p>
                 <p className="text-xs text-gray-400">{user.company_name}</p>
               </div>
-              <button 
+              <Button 
                 onClick={logout}
-                className="text-gray-400 hover:text-white text-sm"
+                variant="ghost"
+                size="sm"
+                className="text-gray-400 hover:text-white text-xs"
               >
                 Logout
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 h-16 fixed top-0 right-0 left-64 z-40">
-        <div className="flex items-center justify-between px-6 h-full">
-          <h2 className="text-xl font-semibold text-gray-800 capitalize">{currentPage}</h2>
-          <div className="flex items-center space-x-4">
-            <NotificationBell />
-            <div className="text-sm text-gray-600">
-              {user.company_name}
-            </div>
-            <button
-              onClick={logout}
-              className="text-gray-600 hover:text-gray-800 text-sm font-medium"
-            >
-              Logout
-            </button>
+      {/* Mobile Header */}
+      <div className={`md:hidden h-16 fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 border-b transition-colors duration-300 ${
+        isDarkMode 
+          ? 'bg-gray-900 border-gray-700' 
+          : 'bg-white border-gray-200'
+      }`}>
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className={`p-2 rounded-md transition-colors ${
+            isDarkMode 
+              ? 'text-gray-300 hover:bg-gray-800' 
+              : 'text-gray-600 hover:bg-gray-100'
+          }`}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        
+        <h1 className={`text-xl font-bold ${
+          isDarkMode ? 'text-blue-400' : 'text-blue-600'
+        }`}>
+          Jobber Pro
+        </h1>
+        
+        <div className="flex items-center space-x-2">
+          <ThemeToggle />
+          <NotificationBell />
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className={`hidden md:block h-16 fixed top-0 right-0 left-64 z-30 flex items-center justify-between px-6 border-b transition-colors duration-300 ${
+        isDarkMode 
+          ? 'bg-gray-800 border-gray-700' 
+          : 'bg-white border-gray-200'
+      }`}>
+        <h2 className={`text-xl font-semibold capitalize ${
+          isDarkMode ? 'text-gray-100' : 'text-gray-800'
+        }`}>
+          {currentPage}
+        </h2>
+        <div className="flex items-center space-x-4">
+          <NotificationBell />
+          <div className={`text-sm ${
+            isDarkMode ? 'text-gray-300' : 'text-gray-600'
+          }`}>
+            {user.company_name}
           </div>
+          <Button
+            onClick={logout}
+            variant="ghost"
+            size="sm"
+            className={isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-800'}
+          >
+            Logout
+          </Button>
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="ml-64 pt-16 p-6">
-        {renderMainContent()}
+      <main className="md:ml-64 pt-16 p-4 md:p-6">
+        <ResponsiveContainer maxWidth="full">
+          {renderMainContent()}
+        </ResponsiveContainer>
       </main>
     </div>
   );
