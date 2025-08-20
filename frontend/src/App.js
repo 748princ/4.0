@@ -908,21 +908,23 @@ const MainApp = () => {
 // Root App Component
 const App = () => {
   return (
-    <AuthProvider>
-      <NotificationsProvider>
-        <AppContent />
-        <Toaster 
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-          }}
-        />
-      </NotificationsProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <NotificationsProvider>
+          <AppContent />
+          <Toaster 
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+            }}
+          />
+        </NotificationsProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 };
 
