@@ -997,19 +997,51 @@ const App = () => {
       <AuthProvider>
         <NotificationsProvider>
           <AppContent />
-          <Toaster 
-            position="top-right"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-              },
-            }}
-          />
+          <EnhancedToaster />
         </NotificationsProvider>
       </AuthProvider>
     </ThemeProvider>
+  );
+};
+
+// Enhanced Theme-Aware Toaster
+const EnhancedToaster = () => {
+  const { isDarkMode } = useTheme();
+  
+  return (
+    <Toaster 
+      position="top-right"
+      toastOptions={{
+        duration: 4000,
+        style: {
+          background: isDarkMode ? '#1f2937' : '#ffffff',
+          color: isDarkMode ? '#f9fafb' : '#1f2937',
+          border: isDarkMode ? '1px solid #374151' : '1px solid #e5e7eb',
+          borderRadius: '8px',
+          boxShadow: isDarkMode 
+            ? '0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15)' 
+            : '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+        },
+        success: {
+          iconTheme: {
+            primary: '#10b981',
+            secondary: isDarkMode ? '#1f2937' : '#ffffff',
+          },
+        },
+        error: {
+          iconTheme: {
+            primary: '#ef4444',
+            secondary: isDarkMode ? '#1f2937' : '#ffffff',
+          },
+        },
+        loading: {
+          iconTheme: {
+            primary: '#3b82f6',
+            secondary: isDarkMode ? '#1f2937' : '#ffffff',
+          },
+        },
+      }}
+    />
   );
 };
 
