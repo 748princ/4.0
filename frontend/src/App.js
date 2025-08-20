@@ -13,6 +13,17 @@ import TimeTracking from './components/TimeTracking';
 import CustomForms from './components/CustomForms';
 import NotificationsManagement, { NotificationsProvider, NotificationBell } from './components/Notifications';
 
+// Enhanced UI Components
+import { ThemeProvider, useTheme } from './hooks/useTheme';
+import ThemeToggle from './components/ui/ThemeToggle';
+import LoadingSpinner from './components/ui/LoadingSpinner';
+import Button from './components/ui/Button';
+import Card from './components/ui/Card';
+import MobileMenu from './components/ui/MobileMenu';
+import ResponsiveContainer from './components/ui/ResponsiveContainer';
+import Input from './components/ui/Input';
+import Modal from './components/ui/Modal';
+
 // Create contexts
 const AuthContext = createContext();
 const ApiContext = createContext();
