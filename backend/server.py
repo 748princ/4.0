@@ -1664,6 +1664,10 @@ async def get_purchase_orders(
             query["status"] = status
         
         pos = await db.purchase_orders.find(query).sort("created_at", -1).to_list(length=None)
+        
+        # Convert ObjectIds to strings
+        pos = convert_objectid_to_str(pos)
+        
         return pos
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
