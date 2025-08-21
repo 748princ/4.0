@@ -548,6 +548,9 @@ async def get_inventory_analytics(
             "company_id": user['company_id']
         }).sort("created_at", -1).limit(5).to_list(length=5)
         
+        # Convert ObjectIds to strings
+        recent_movements = convert_objectid_to_str(recent_movements)
+        
         for movement in recent_movements:
             item = await db.inventory_items.find_one({
                 "id": movement["inventory_item_id"],
