@@ -198,6 +198,9 @@ async def update_inventory_item(
             "company_id": user['company_id']
         })
         
+        # Convert ObjectIds to strings
+        updated_item = convert_objectid_to_str(updated_item)
+        
         return updated_item
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
