@@ -479,7 +479,11 @@
   run_ui: true
 
 ## test_plan:
-  current_focus: []
+  current_focus:
+    - "Calendar View Interface"
+    - "Team Management Interface" 
+    - "Custom Forms Interface"
+    - "Inventory Management Interface"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
