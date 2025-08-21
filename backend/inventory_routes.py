@@ -428,6 +428,9 @@ async def get_low_stock_alerts(
         
         alerts = await db.low_stock_alerts.find(query).sort("alert_date", -1).to_list(length=None)
         
+        # Convert ObjectIds to strings
+        alerts = convert_objectid_to_str(alerts)
+        
         # Enrich with item details
         for alert in alerts:
             item = await db.inventory_items.find_one({
