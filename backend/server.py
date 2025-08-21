@@ -1749,6 +1749,17 @@ async def startup_db_client():
     await db.notifications.create_index([("user_id", 1), ("is_read", 1)])
     await db.custom_forms.create_index([("company_id", 1), ("service_types", 1)])
     await db.form_submissions.create_index([("company_id", 1), ("form_id", 1), ("job_id", 1)])
+    
+    # Inventory management indexes
+    await db.inventory_items.create_index([("company_id", 1), ("category", 1), ("is_active", 1)])
+    await db.inventory_items.create_index([("company_id", 1), ("sku", 1)], unique=True)
+    await db.inventory_items.create_index([("company_id", 1), ("name", "text"), ("description", "text")])
+    await db.stock_movements.create_index([("company_id", 1), ("inventory_item_id", 1), ("created_at", -1)])
+    await db.stock_movements.create_index([("company_id", 1), ("movement_type", 1)])
+    await db.job_parts_usage.create_index([("company_id", 1), ("job_id", 1)])
+    await db.job_parts_usage.create_index([("company_id", 1), ("inventory_item_id", 1)])
+    await db.purchase_orders.create_index([("company_id", 1), ("status", 1), ("created_at", -1)])
+    await db.low_stock_alerts.create_index([("company_id", 1), ("is_acknowledged", 1), ("alert_date", -1)])
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
