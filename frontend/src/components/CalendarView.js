@@ -25,7 +25,7 @@ const CalendarView = ({ user }) => {
   const api = axios.create({
     baseURL: `${baseURL}/api`,
     headers: {
-      'Authorization': `Bearer ${localStorage.getItem('token')}`
+      'Authorization': `Bearer ${localStorage.getItem('access_token')}`
     }
   });
 
