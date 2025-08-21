@@ -12,6 +12,7 @@ import TeamManagement from './components/TeamManagement';
 import TimeTracking from './components/TimeTracking';
 import CustomForms from './components/CustomForms';
 import NotificationsManagement, { NotificationsProvider, NotificationBell } from './components/Notifications';
+import InventoryManagement from './components/InventoryManagement';
 
 // Enhanced UI Components
 import { ThemeProvider, useTheme } from './hooks/useTheme';
