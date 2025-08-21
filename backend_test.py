@@ -27,6 +27,12 @@ class JobberProAPITester:
         self.test_notification_id = None
         self.test_form_id = None
         
+        # Inventory test data
+        self.test_inventory_item_id = None
+        self.test_stock_movement_id = None
+        self.test_purchase_order_id = None
+        self.test_low_stock_alert_id = None
+        
         # Test data
         self.test_timestamp = datetime.now().strftime('%H%M%S')
         self.test_user = {
