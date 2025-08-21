@@ -158,6 +158,10 @@ async def get_inventory_item(
             "company_id": user['company_id']
         }).sort("created_at", -1).limit(10).to_list(length=10)
         
+        # Convert ObjectIds to strings
+        item = convert_objectid_to_str(item)
+        movements = convert_objectid_to_str(movements)
+        
         item["recent_movements"] = movements
         return item
     except Exception as e:
