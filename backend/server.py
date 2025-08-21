@@ -1644,6 +1644,10 @@ async def create_purchase_order(
             item["purchase_order_id"] = purchase_order["id"]
         
         await db.purchase_orders.insert_one(purchase_order)
+        
+        # Convert ObjectIds to strings before returning
+        purchase_order = convert_objectid_to_str(purchase_order)
+        
         return purchase_order
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
