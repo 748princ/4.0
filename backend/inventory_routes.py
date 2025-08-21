@@ -484,6 +484,9 @@ async def get_inventory_analytics(
             "is_active": True
         }).to_list(length=None)
         
+        # Convert ObjectIds to strings
+        items = convert_objectid_to_str(items)
+        
         total_items = len(items)
         total_value = sum(item.get("stock_quantity", 0) * item.get("unit_cost", 0) for item in items)
         low_stock_items = sum(1 for item in items if item.get("stock_quantity", 0) <= item.get("min_stock_level", 0))
