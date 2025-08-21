@@ -397,6 +397,9 @@ async def get_job_parts_usage(
             "company_id": user['company_id']
         }).to_list(length=None)
         
+        # Convert ObjectIds to strings
+        usage_records = convert_objectid_to_str(usage_records)
+        
         # Enrich with item details
         for usage in usage_records:
             item = await db.inventory_items.find_one({
