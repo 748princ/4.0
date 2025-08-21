@@ -505,6 +505,9 @@ async def get_inventory_analytics(
             "created_at": {"$gte": thirty_days_ago}
         }).to_list(length=None)
         
+        # Convert ObjectIds to strings
+        movements = convert_objectid_to_str(movements)
+        
         movement_summary = {}
         for movement in movements:
             movement_type = movement.get("movement_type", "other")
