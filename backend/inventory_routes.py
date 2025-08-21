@@ -289,6 +289,9 @@ async def get_stock_movements(
         cursor = db.stock_movements.find(query).sort("created_at", -1).skip(skip).limit(limit)
         movements = await cursor.to_list(length=limit)
         
+        # Convert ObjectIds to strings
+        movements = convert_objectid_to_str(movements)
+        
         # Enrich with item details
         for movement in movements:
             item = await db.inventory_items.find_one({
