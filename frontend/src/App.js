@@ -838,6 +838,8 @@ const MainApp = () => {
         return <TeamManagement user={user} />;
       case 'time':
         return <TimeTracking user={user} />;
+      case 'inventory':
+        return <InventoryManagement />;
       case 'forms':
         return <CustomForms user={user} />;
       case 'invoices':
