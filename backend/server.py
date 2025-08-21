@@ -1450,6 +1450,278 @@ async def delete_job(job_id: str, current_user: dict = Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Job not found")
     return {"message": "Job deleted successfully"}
 
+# ============================
+# INVENTORY MANAGEMENT ROUTES 
+# ============================
+
+# Inventory Items Endpoints
+@api_router.post("/inventory/items")
+async def create_inventory_item_route(
+    item_data: InventoryItemCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new inventory item"""
+    return await create_inventory_item(item_data, db, current_user)
+
+@api_router.get("/inventory/items")
+async def get_inventory_items_route(
+    category: Optional[str] = None,
+    search: Optional[str] = None,
+    low_stock: bool = False,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get inventory items with filtering"""
+    return await get_inventory_items(db, current_user, category, search, low_stock, skip, limit)
+
+@api_router.get("/inventory/items/{item_id}")
+async def get_inventory_item_route(
+    item_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a specific inventory item"""
+    return await get_inventory_item(item_id, db, current_user)
+
+@api_router.put("/inventory/items/{item_id}")
+async def update_inventory_item_route(
+    item_id: str,
+    item_data: InventoryItemUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an inventory item"""
+    return await update_inventory_item(item_id, item_data, db, current_user)
+
+@api_router.delete("/inventory/items/{item_id}")
+async def delete_inventory_item_route(
+    item_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete (deactivate) an inventory item"""
+    result = await db.inventory_items.update_one(
+        {"id": item_id, "company_id": current_user["company_id"]},
+        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Inventory item not found")
+    return {"message": "Inventory item deleted successfully"}
+
+# Stock Movement Endpoints
+@api_router.post("/inventory/movements")
+async def create_stock_movement_route(
+    movement_data: StockMovementCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a stock movement (adjust inventory)"""
+    return await create_stock_movement(movement_data, db, current_user)
+
+@api_router.get("/inventory/movements")
+async def get_stock_movements_route(
+    item_id: Optional[str] = None,
+    movement_type: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get stock movements with filtering"""
+    return await get_stock_movements(db, current_user, item_id, movement_type, skip, limit)
+
+# Job Parts Usage Endpoints
+@api_router.post("/inventory/job-parts-usage")
+async def create_job_part_usage_route(
+    usage_data: JobPartUsageCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Record parts usage for a job"""
+    return await create_job_part_usage(usage_data, db, current_user)
+
+@api_router.get("/jobs/{job_id}/parts-usage")
+async def get_job_parts_usage_route(
+    job_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get parts usage for a specific job"""
+    return await get_job_parts_usage(job_id, db, current_user)
+
+# Low Stock Alerts Endpoints
+@api_router.get("/inventory/low-stock-alerts")
+async def get_low_stock_alerts_route(
+    acknowledged: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get low stock alerts"""
+    return await get_low_stock_alerts(db, current_user, acknowledged)
+
+@api_router.put("/inventory/low-stock-alerts/{alert_id}/acknowledge")
+async def acknowledge_low_stock_alert_route(
+    alert_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Acknowledge a low stock alert"""
+    return await acknowledge_low_stock_alert(alert_id, db, current_user)
+
+# Inventory Analytics Endpoint
+@api_router.get("/inventory/analytics")
+async def get_inventory_analytics_route(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get inventory analytics and insights"""
+    return await get_inventory_analytics(db, current_user)
+
+# Purchase Orders (Simplified implementation)
+@api_router.post("/inventory/purchase-orders")
+async def create_purchase_order(
+    po_data: PurchaseOrderCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a purchase order"""
+    try:
+        # Generate PO number
+        po_count = await db.purchase_orders.count_documents({"company_id": current_user["company_id"]})
+        po_number = f"PO-{po_count + 1:06d}"
+        
+        # Calculate total amount
+        total_amount = sum(item.quantity * item.unit_cost for item in po_data.items)
+        
+        # Create purchase order items
+        po_items = []
+        for item_data in po_data.items:
+            po_item = {
+                "id": str(uuid.uuid4()),
+                "purchase_order_id": "",  # Will be set after PO creation
+                "inventory_item_id": item_data.inventory_item_id,
+                "quantity": item_data.quantity,
+                "unit_cost": item_data.unit_cost,
+                "total_cost": item_data.quantity * item_data.unit_cost,
+                "received_quantity": 0,
+                "notes": item_data.notes
+            }
+            po_items.append(po_item)
+        
+        # Create purchase order
+        purchase_order = {
+            "id": str(uuid.uuid4()),
+            "company_id": current_user["company_id"],
+            "po_number": po_number,
+            "supplier_name": po_data.supplier_name,
+            "supplier_contact": po_data.supplier_contact,
+            "status": "pending",
+            "order_date": datetime.utcnow(),
+            "expected_delivery_date": po_data.expected_delivery_date,
+            "received_date": None,
+            "total_amount": total_amount,
+            "items": po_items,
+            "notes": po_data.notes,
+            "created_by": current_user["id"],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        # Update po_id in items
+        for item in purchase_order["items"]:
+            item["purchase_order_id"] = purchase_order["id"]
+        
+        await db.purchase_orders.insert_one(purchase_order)
+        return purchase_order
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/inventory/purchase-orders")
+async def get_purchase_orders(
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get purchase orders"""
+    try:
+        query = {"company_id": current_user["company_id"]}
+        if status:
+            query["status"] = status
+        
+        pos = await db.purchase_orders.find(query).sort("created_at", -1).to_list(length=None)
+        return pos
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.put("/inventory/purchase-orders/{po_id}/receive")
+async def receive_purchase_order(
+    po_id: str,
+    received_items: List[Dict[str, Any]],  # [{"item_id": "", "received_quantity": 10}]
+    current_user: dict = Depends(get_current_user)
+):
+    """Receive items from a purchase order"""
+    try:
+        # Get PO
+        po = await db.purchase_orders.find_one({
+            "id": po_id,
+            "company_id": current_user["company_id"]
+        })
+        if not po:
+            raise HTTPException(status_code=404, detail="Purchase order not found")
+        
+        # Update received quantities and create stock movements
+        for received_item in received_items:
+            item_id = received_item["item_id"]
+            received_qty = received_item["received_quantity"]
+            
+            # Find the PO item
+            po_item = None
+            for item in po["items"]:
+                if item["inventory_item_id"] == item_id:
+                    po_item = item
+                    break
+            
+            if not po_item:
+                continue
+            
+            # Update received quantity
+            po_item["received_quantity"] = received_qty
+            
+            # Create stock movement
+            stock_movement = StockMovement(
+                company_id=current_user["company_id"],
+                inventory_item_id=item_id,
+                movement_type="in",
+                quantity=received_qty,
+                previous_quantity=0,  # Will be updated by stock movement function
+                new_quantity=0,  # Will be calculated
+                reference_id=po_id,
+                reference_type="purchase_order",
+                unit_cost=po_item["unit_cost"],
+                notes=f"Received from PO {po['po_number']}",
+                created_by=current_user["id"]
+            )
+            
+            # Use the stock movement creation function
+            await create_stock_movement(StockMovementCreate(
+                inventory_item_id=item_id,
+                movement_type="in",
+                quantity=received_qty,
+                reference_id=po_id,
+                reference_type="purchase_order",
+                unit_cost=po_item["unit_cost"],
+                notes=f"Received from PO {po['po_number']}"
+            ), db, current_user)
+        
+        # Update PO status
+        all_received = all(item["received_quantity"] >= item["quantity"] for item in po["items"])
+        new_status = "received" if all_received else "partially_received"
+        
+        await db.purchase_orders.update_one(
+            {"id": po_id, "company_id": current_user["company_id"]},
+            {
+                "$set": {
+                    "items": po["items"],
+                    "status": new_status,
+                    "received_date": datetime.utcnow() if all_received else None,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        return {"message": "Purchase order received successfully", "status": new_status}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Include the router in the main app
 app.include_router(api_router)
 
