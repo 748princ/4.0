@@ -814,6 +814,15 @@ const MainApp = () => {
                       Add Client
                     </Button>
                     <Button 
+                      onClick={() => setCurrentPage('inventory')}
+                      variant="info"
+                      fullWidth
+                      className="justify-start"
+                    >
+                      <span className="text-xl mr-3">📦</span>
+                      Manage Inventory
+                    </Button>
+                    <Button 
                       onClick={() => setCurrentPage('invoices')}
                       variant="warning"
                       fullWidth
