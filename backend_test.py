@@ -1517,6 +1517,35 @@ class JobberProAPITester:
         self.test_submit_custom_form()
         self.test_get_form_submissions()
         
+        # Inventory Management Tests (New Features)
+        print("\n" + "="*50)
+        print("🏭 INVENTORY MANAGEMENT SYSTEM TESTING")
+        print("="*50)
+        
+        self.test_create_inventory_item()
+        self.test_get_inventory_items()
+        self.test_get_specific_inventory_item()
+        self.test_update_inventory_item()
+        self.test_inventory_items_filtering()
+        self.test_inventory_search()
+        
+        self.test_create_stock_movement()
+        self.test_get_stock_movements()
+        self.test_stock_movement_filtering()
+        
+        self.test_job_parts_usage()
+        self.test_get_job_parts_usage()
+        
+        self.test_create_purchase_order()
+        self.test_get_purchase_orders()
+        self.test_receive_purchase_order()
+        
+        self.test_low_stock_alerts()
+        self.test_acknowledge_low_stock_alert()
+        self.test_inventory_analytics()
+        self.test_low_stock_filtering()
+        self.test_inventory_workflow()
+        
         # Cleanup
         self.cleanup_test_data()
         
