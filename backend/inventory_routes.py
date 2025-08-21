@@ -122,6 +122,9 @@ async def get_inventory_items(
         cursor = db.inventory_items.find(query).skip(skip).limit(limit)
         items = await cursor.to_list(length=limit)
         
+        # Convert ObjectIds to strings
+        items = convert_objectid_to_str(items)
+        
         # Get total count
         total = await db.inventory_items.count_documents(query)
         
