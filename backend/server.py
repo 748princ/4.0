@@ -27,6 +27,22 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.pdfgen import canvas
 import io
 
+# Import inventory models and functions
+from inventory_models import (
+    InventoryItem, InventoryItemCreate, InventoryItemUpdate,
+    StockMovement, StockMovementCreate,
+    JobPartUsage, JobPartUsageCreate,
+    PurchaseOrder, PurchaseOrderCreate,
+    LowStockAlert, InventoryAnalytics
+)
+from inventory_routes import (
+    create_inventory_item, get_inventory_items, get_inventory_item, update_inventory_item,
+    create_stock_movement, get_stock_movements,
+    create_job_part_usage, get_job_parts_usage,
+    get_low_stock_alerts, acknowledge_low_stock_alert,
+    get_inventory_analytics
+)
+
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
