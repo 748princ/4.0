@@ -26,6 +26,28 @@ from reportlab.lib.units import inch
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.pdfgen import canvas
 import io
+from bson import ObjectId
+
+# Helper function to convert MongoDB documents to JSON-serializable format
+def convert_objectid_to_str(doc):
+    """Convert MongoDB ObjectId fields to strings"""
+    if doc is None:
+        return None
+    if isinstance(doc, list):
+        return [convert_objectid_to_str(item) for item in doc]
+    if isinstance(doc, dict):
+        result = {}
+        for key, value in doc.items():
+            if isinstance(value, ObjectId):
+                result[key] = str(value)
+            elif isinstance(value, dict):
+                result[key] = convert_objectid_to_str(value)
+            elif isinstance(value, list):
+                result[key] = convert_objectid_to_str(value)
+            else:
+                result[key] = value
+        return result
+    return doc
 
 # Import inventory models and functions
 from inventory_models import (
