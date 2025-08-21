@@ -9,7 +9,6 @@ import InvoicesManagement from './components/InvoicesManagement';
 import ReportsAnalytics from './components/ReportsAnalytics';
 import CalendarView from './components/CalendarView';
 import TeamManagement from './components/TeamManagement';
-import TimeTracking from './components/TimeTracking';
 import CustomForms from './components/CustomForms';
 import NotificationsManagement, { NotificationsProvider, NotificationBell } from './components/Notifications';
 import InventoryManagement from './components/InventoryManagement';
