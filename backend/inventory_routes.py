@@ -4,6 +4,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta
 import uuid
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from bson import ObjectId
 from inventory_models import (
     InventoryItem, InventoryItemCreate, InventoryItemUpdate,
     StockMovement, StockMovementCreate,
@@ -14,6 +15,27 @@ from inventory_models import (
 
 # This will be integrated into the main server.py
 inventory_router = APIRouter()
+
+# Helper function to convert MongoDB documents to JSON-serializable format
+def convert_objectid_to_str(doc):
+    """Convert MongoDB ObjectId fields to strings"""
+    if doc is None:
+        return None
+    if isinstance(doc, list):
+        return [convert_objectid_to_str(item) for item in doc]
+    if isinstance(doc, dict):
+        result = {}
+        for key, value in doc.items():
+            if isinstance(value, ObjectId):
+                result[key] = str(value)
+            elif isinstance(value, dict):
+                result[key] = convert_objectid_to_str(value)
+            elif isinstance(value, list):
+                result[key] = convert_objectid_to_str(value)
+            else:
+                result[key] = value
+        return result
+    return doc
 
 # Dependency to get database and user info would be imported from main server.py
 
