@@ -309,8 +309,10 @@ async def create_job_part_usage(
         unit_price = usage_data.unit_price or item.get("selling_price", 0)
         
         # Create job part usage record
+        usage_dict = usage_data.dict()
+        usage_dict.pop('unit_price', None)  # Remove unit_price from dict to avoid conflict
         job_usage = JobPartUsage(
-            **usage_data.dict(),
+            **usage_dict,
             company_id=user['company_id'],
             unit_price=unit_price,
             total_cost=unit_price * usage_data.quantity_used
